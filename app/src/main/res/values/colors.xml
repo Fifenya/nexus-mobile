@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bgPrimary">#0a0a0a</color>
+    <color name="bgSecondary">#1a1a1a</color>
+    <color name="bgTertiary">#252525</color>
+    <color name="bgInput">#1a1a1a</color>
+    <color name="accent">#dc2626</color>
+    <color name="accentPressed">#b91c1c</color>
+    <color name="textPrimary">#ffffff</color>
+    <color name="textSecondary">#a0a0a0</color>
+    <color name="textMuted">#666666</color>
+    <color name="border">#2a2a2a</color>
+    <color name="online">#4ade80</color>
+    <color name="danger">#dc2626</color>
+    <color name="messageOwn">#dc2626</color>
+    <color name="messageOther">#1a1a1a</color>
+</resources>
