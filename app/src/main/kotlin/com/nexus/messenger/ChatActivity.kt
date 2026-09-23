@@ -38,7 +38,6 @@ class ChatActivity : Activity() {
             setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
         }
 
-        // Шапка
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
@@ -57,7 +56,6 @@ class ChatActivity : Activity() {
         header.addView(titleText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = 16 })
         root.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        // Reply bar (скрыт по умолчанию)
         replyBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; visibility = View.GONE
             setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
@@ -83,7 +81,6 @@ class ChatActivity : Activity() {
         replyBar.addView(closeReply)
         root.addView(replyBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        // Список сообщений
         val adapter = object : ArrayAdapter<Message>(this@ChatActivity, 0, messages) {
             override fun getView(pos: Int, cv: View?, parent: ViewGroup): View {
                 val msg = getItem(pos)!!
@@ -103,7 +100,6 @@ class ChatActivity : Activity() {
                     setPadding(28, 16, 28, 16)
                 }
 
-                // Reply внутри bubble
                 if (msg.replyText != null) {
                     val replyWrap = LinearLayout(context).apply {
                         orientation = LinearLayout.VERTICAL
@@ -117,8 +113,6 @@ class ChatActivity : Activity() {
                         text = msg.replyText; textSize = 12f; maxLines = 2
                         setTextColor(resources.getColor(R.color.textSecondary, null))
                     })
-                    val leftBar = FrameLayout(context)
-                    leftBar.addView(replyWrap)
                     val bar = View(context).apply {
                         setBackgroundColor(resources.getColor(R.color.textPrimary, null))
                     }
@@ -158,7 +152,6 @@ class ChatActivity : Activity() {
         }
         root.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        // Поле ввода
         val inputBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
@@ -254,7 +247,8 @@ class ChatActivity : Activity() {
                 if (code == 200) {
                     val arr = Api.parseArray(body)
                     for (i in 0 until arr.length()) messages.add(Message.fromJson(arr.getJSONObject(i)))
-                    (list.adapter as ArrayAdapter).notifyDataSetChanged()
+                    @Suppress("UNCHECKED_CAST")
+                    (list.adapter as ArrayAdapter<Message>).notifyDataSetChanged()
                     list.setSelection(messages.size - 1)
                 }
             }

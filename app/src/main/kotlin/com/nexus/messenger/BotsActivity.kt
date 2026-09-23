@@ -11,7 +11,7 @@ import com.nexus.messenger.data.Api
 import org.json.JSONObject
 
 class BotsActivity : Activity() {
-    private val bots = mutableListOf<Pair<String, String>>() // id, name
+    private val bots = mutableListOf<Pair<String, String>>()
     private lateinit var list: ListView
     private lateinit var emptyText: TextView
 
@@ -43,7 +43,8 @@ class BotsActivity : Activity() {
         root.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         list = ListView(this).apply { setBackgroundColor(resources.getColor(R.color.bgPrimary, null)) }
-        list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, bots.map { "🤖 ${it.second}" })
+        val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, mutableListOf<String>())
+        list.adapter = adapter
         root.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         emptyText = TextView(this).apply {
@@ -86,7 +87,8 @@ class BotsActivity : Activity() {
                         val j = arr.getJSONObject(i)
                         bots.add(j.optString("id") to j.optString("name"))
                     }
-                    (list.adapter as ArrayAdapter).apply {
+                    @Suppress("UNCHECKED_CAST")
+                    (list.adapter as ArrayAdapter<String>).apply {
                         clear()
                         addAll(bots.map { "🤖 ${it.second}" })
                         notifyDataSetChanged()

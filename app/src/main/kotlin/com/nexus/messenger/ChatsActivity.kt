@@ -11,6 +11,7 @@ import android.widget.*
 import com.nexus.messenger.data.Api
 import com.nexus.messenger.data.Store
 import com.nexus.messenger.data.Chat
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,7 +29,6 @@ class ChatsActivity : Activity() {
             setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
         }
 
-        // Шапка
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
@@ -47,7 +47,6 @@ class ChatsActivity : Activity() {
         header.addView(menuBtn)
         root.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        // Поиск
         searchInput = EditText(this).apply {
             hint = "Поиск"; setTextColor(resources.getColor(R.color.textPrimary, null))
             setHintTextColor(resources.getColor(R.color.textMuted, null))
@@ -58,15 +57,13 @@ class ChatsActivity : Activity() {
             setMargins(16, 16, 16, 16)
         })
 
-        // Список
         val adapter = object : ArrayAdapter<Chat>(this@ChatsActivity, 0, chats) {
             override fun getView(pos: Int, cv: View?, parent: ViewGroup): View {
                 val chat = getItem(pos)!!
-                val view = cv ?: LinearLayout(context).apply {
+                val view = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL; setPadding(32, 24, 32, 24)
                     setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
                 }
-                view.removeAllViews()
 
                 val avatar = TextView(context).apply {
                     text = (chat.title ?: "Ч").take(1).uppercase()
@@ -117,7 +114,6 @@ class ChatsActivity : Activity() {
         list.dividerHeight = 1
         root.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        // Empty state
         emptyText = TextView(this).apply {
             text = "Нет чатов"; gravity = Gravity.CENTER; textSize = 16f
             setTextColor(resources.getColor(R.color.textSecondary, null))
@@ -125,7 +121,6 @@ class ChatsActivity : Activity() {
         }
         root.addView(emptyText)
 
-        // FAB (создать чат) — кнопка внизу справа
         val frame = FrameLayout(this)
         frame.addView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         val fab = Button(this).apply {
@@ -153,7 +148,7 @@ class ChatsActivity : Activity() {
                 .setTitle(chat.title ?: "Чат")
                 .setItems(arrayOf(if (chat.pinned) "Открепить" else "Закрепить")) { _, i ->
                     val path = if (i == 0 && chat.pinned) "/chats/${chat.id}/unpin" else "/chats/${chat.id}/pin"
-                    Api.post(path, org.json.JSONObject()) { _, _ -> loadChats() }
+                    Api.post(path, JSONObject()) { _, _ -> loadChats() }
                 }
                 .show()
             true
@@ -162,7 +157,10 @@ class ChatsActivity : Activity() {
         searchInput.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) { adapter.filter.filter(s) }
+            override fun afterTextChanged(s: android.text.Editable?) {
+                @Suppress("UNCHECKED_CAST")
+                (list.adapter as ArrayAdapter<Chat>).filter.filter(s)
+            }
         })
     }
 
@@ -181,7 +179,8 @@ class ChatsActivity : Activity() {
                     for (i in 0 until arr.length()) list.add(Chat.fromJson(arr.getJSONObject(i)))
                     list.sortWith(compareByDescending<Chat> { it.pinned })
                     chats.addAll(list)
-                    (list.adapter as ArrayAdapter).notifyDataSetChanged()
+                    @Suppress("UNCHECKED_CAST")
+                    (list.adapter as ArrayAdapter<Chat>).notifyDataSetChanged()
                 }
                 emptyText.visibility = if (chats.isEmpty()) View.VISIBLE else View.GONE
                 list.visibility = if (chats.isEmpty()) View.GONE else View.VISIBLE
@@ -200,7 +199,7 @@ class ChatsActivity : Activity() {
             .setView(input)
             .setPositiveButton("Создать") { _, _ ->
                 val title = input.text.toString().trim()
-                Api.post("/chats", org.json.JSONObject().put("title", title).put("userIds", org.json.JSONArray())) { code, body ->
+                Api.post("/chats", JSONObject().put("title", title).put("userIds", org.json.JSONArray())) { code, body ->
                     runOnUiThread {
                         if (code == 200 || code == 201) {
                             loadChats()

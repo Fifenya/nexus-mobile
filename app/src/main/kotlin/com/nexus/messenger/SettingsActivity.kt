@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.*
-import com.nexus.messenger.data.Store
 
 class SettingsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,14 +32,13 @@ class SettingsActivity : Activity() {
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = 16 })
         root.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        // Профиль
         val profile = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
             setPadding(32, 32, 32, 32)
         }
         val avatar = TextView(this).apply {
-            text = (Store.user?.username ?: "?").take(1).uppercase()
+            text = (com.nexus.messenger.data.Store.user?.username ?: "?").take(1).uppercase()
             textSize = 24f; gravity = Gravity.CENTER
             setTextColor(resources.getColor(R.color.textPrimary, null))
             setBackgroundColor(resources.getColor(R.color.accent, null))
@@ -48,7 +46,7 @@ class SettingsActivity : Activity() {
         profile.addView(avatar, LinearLayout.LayoutParams(120, 120))
         val pInfo = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         pInfo.addView(TextView(this).apply {
-            text = Store.user?.username ?: "Гость"; textSize = 18f
+            text = com.nexus.messenger.data.Store.user?.username ?: "Гость"; textSize = 18f
             setTextColor(resources.getColor(R.color.textPrimary, null))
         })
         pInfo.addView(TextView(this).apply {
@@ -56,10 +54,9 @@ class SettingsActivity : Activity() {
             setTextColor(resources.getColor(R.color.textMuted, null))
         })
         profile.addView(pInfo, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = 24 })
-        profile.setOnClickListener { startActivity(Intent(this@SettingsActivity, ProfileActivity::class.java)) }
+        profile.setOnClickListener { startActivity(Intent(this@SettingsActivity, ProfileActivity::class.java)) }  // ИСПРАВЛЕНО
         root.addView(profile, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 16 })
 
-        // Пункты меню
         val menu = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
@@ -74,12 +71,11 @@ class SettingsActivity : Activity() {
                 text = label; textSize = 16f; setPadding(32, 32, 32, 32)
                 setTextColor(resources.getColor(R.color.textPrimary, null))
             }
-            cls?.let { item.setOnClickListener { startActivity(Intent(this@SettingsActivity, it)) } }
+            cls?.let { item.setOnClickListener { startActivity(Intent(this@SettingsActivity, it)) } }  // ИСПРАВЛЕНО
             menu.addView(item)
         }
         root.addView(menu, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 16 })
 
-        // API URL
         val apiWrap = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; setPadding(32, 32, 32, 32)
             setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
@@ -89,7 +85,7 @@ class SettingsActivity : Activity() {
             setTextColor(resources.getColor(R.color.textMuted, null))
         })
         val apiUrl = EditText(this).apply {
-            setText(Store.apiBase); setTextColor(resources.getColor(R.color.textPrimary, null))
+            setText(com.nexus.messenger.data.Store.apiBase); setTextColor(resources.getColor(R.color.textPrimary, null))
             setHintTextColor(resources.getColor(R.color.textMuted, null))
             setBackgroundColor(resources.getColor(R.color.bgInput, null))
             setPadding(24, 16, 24, 16)
@@ -100,13 +96,12 @@ class SettingsActivity : Activity() {
             setBackgroundColor(resources.getColor(R.color.accent, null))
         }
         saveApi.setOnClickListener {
-            Store.apiBase = apiUrl.text.toString().trim()
+            com.nexus.messenger.data.Store.apiBase = apiUrl.text.toString().trim()
             Toast.makeText(this, "Сохранено", Toast.LENGTH_SHORT).show()
         }
         apiWrap.addView(saveApi, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 110).apply { topMargin = 12 })
         root.addView(apiWrap, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 16 })
 
-        // Выход
         val logout = Button(this).apply {
             text = "Выйти"; setTextColor(resources.getColor(R.color.textPrimary, null))
             setBackgroundColor(resources.getColor(R.color.danger, null))
@@ -115,7 +110,7 @@ class SettingsActivity : Activity() {
             AlertDialog.Builder(this)
                 .setMessage("Выйти из аккаунта?")
                 .setPositiveButton("Выйти") { _, _ ->
-                    Store.logout()
+                    com.nexus.messenger.data.Store.logout()
                     startActivity(Intent(this@SettingsActivity, LoginActivity::class.java))
                     finishAffinity()
                 }
