@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Nexus</string>
+    <string name="app_name_neon">Nexus Neon</string>
+    <string name="app_name_crimson">Nexus Crimson</string>
+    <string name="app_name_light">Nexus Light</string>
+    <string name="app_name_emboss">Nexus Emboss</string>
+    <string name="app_name_line">Nexus Line</string>
+    <string name="app_name_bubble">Nexus Bubble</string>
 </resources>
