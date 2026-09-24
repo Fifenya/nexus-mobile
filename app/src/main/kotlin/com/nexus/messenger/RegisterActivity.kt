@@ -52,7 +52,6 @@ class RegisterActivity : Activity() {
             bottomMargin = dp(40)
         })
 
-        // Три поля: имя, пароль, повтор
         val fields = mutableListOf<EditText>()
         val hints = listOf("Имя пользователя", "Пароль", "Повторите пароль")
         val types = listOf(1, 0x81, 0x81)
@@ -128,8 +127,10 @@ class RegisterActivity : Activity() {
                     btn.isEnabled = true
                     val j = Api.parseObj(body)
                     if ((code == 200 || code == 201) && j != null) {
-                        Store.token = j.optString("access_token").takeIf { it.isNotEmpty() }
-                            ?: j.optString("token")
+                        // Бэкенд возвращает "accessToken" (camelCase).
+                        Store.token = j.optString("accessToken").takeIf { it.isNotEmpty() }
+                            ?: j.optString("access_token").takeIf { it.isNotEmpty() }
+                            ?: j.optString("token").takeIf { it.isNotEmpty() }
                         j.optJSONObject("user")?.let { Store.user = User.fromJson(it) }
                         startActivity(Intent(this, ChatsActivity::class.java))
                         finish()
