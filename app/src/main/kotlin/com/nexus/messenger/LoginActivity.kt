@@ -11,6 +11,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import com.nexus.messenger.data.Api
 import com.nexus.messenger.data.Store
 import com.nexus.messenger.data.User
@@ -119,13 +120,27 @@ class LoginActivity : Activity() {
         }
         root.addView(link, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
+        // Строка: адрес сервера (тап = диалог смены)
+        val serverLink = TextView(this).apply {
+            text = "🌐 Сервер: " + Store.apiBase
+            gravity = Gravity.CENTER
+            textSize = 11f
+            maxLines = 1
+            setTextColor(resources.getColor(R.color.textMuted, null))
+            setPadding(dp(16), dp(12), dp(16), dp(4))
+        }
+        serverLink.setOnClickListener { showServerDialog() }
+        root.addView(serverLink, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+            topMargin = dp(16)
+        })
+
         root.addView(TextView(this).apply {
             text = "Nexus Messenger v1.0.0"
             gravity = Gravity.CENTER
             textSize = 11f
             setTextColor(resources.getColor(R.color.textMuted, null))
         }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-            topMargin = dp(32)
+            topMargin = dp(8)
         })
 
         setContentView(scroll)
@@ -166,5 +181,33 @@ class LoginActivity : Activity() {
                 }
             }
         }
+    }
+
+    /** Диалог смены адреса сервера прямо с экрана входа */
+    private fun showServerDialog() {
+        val input = EditText(this).apply {
+            setText(Store.apiBase)
+            setTextColor(resources.getColor(R.color.textPrimary, null))
+            setHintTextColor(resources.getColor(R.color.textMuted, null))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            textSize = 14f
+        }
+        AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+            .setTitle("Адрес сервера")
+            .setMessage(
+                "При старте приложение само читает актуальный туннель из " +
+                "fifenya.github.io/nexus-redirect/url.txt. Впишите адрес вручную, " +
+                "если авто-определение не сработало."
+            )
+            .setView(input)
+            .setPositiveButton("Сохранить") { _, _ ->
+                val v = input.text.toString().trim()
+                if (v.isNotEmpty()) {
+                    Store.apiBase = v
+                    Toast.makeText(this, "Сервер: " + Store.apiBase, Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 }
