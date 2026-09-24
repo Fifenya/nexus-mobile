@@ -11,6 +11,33 @@ import java.util.concurrent.Executors
 object Api {
     private val exec = Executors.newCachedThreadPool()
 
+    // Стабильная ссылка-диспетчер (GitHub Pages)
+    private const val URL_DISPATCHER = "https://fifenya.github.io/nexus-redirect/url.txt"
+
+    /**
+     * При старте получаем актуальный URL туннеля с GitHub Pages.
+     * Если не получилось — оставляем то, что сохранено в Store.
+     */
+    fun resolveServer(onDone: () -> Unit) {
+        exec.execute {
+            try {
+                val conn = URL(URL_DISPATCHER).openConnection() as HttpURLConnection
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                if (conn.responseCode == 200) {
+                    val text = BufferedReader(InputStreamReader(conn.inputStream))
+                        .use { it.readText() }.trim()
+                    if (text.startsWith("https://") || text.startsWith("http://")) {
+                        Store.apiBase = text
+                    }
+                }
+            } catch (_: Exception) {
+                // fallback — используем сохранённый адрес
+            }
+            onDone()
+        }
+    }
+
     private fun request(
         method: String, path: String, body: JSONObject? = null,
         onResult: (Int, String) -> Unit
