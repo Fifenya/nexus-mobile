@@ -71,7 +71,12 @@ class SettingsActivity : Activity() {
                 text = label; textSize = 16f; setPadding(32, 32, 32, 32)
                 setTextColor(resources.getColor(R.color.textPrimary, null))
             }
-            cls?.let { item.setOnClickListener { startActivity(Intent(this@SettingsActivity, it)) } }  // ИСПРАВЛЕНО
+            if (cls != null) {
+                item.setOnClickListener {
+                    val intent = Intent(this@SettingsActivity, cls)
+                    startActivity(intent)
+                }
+            }  // ИСПРАВЛЕНО
             menu.addView(item)
         }
         root.addView(menu, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 16 })
