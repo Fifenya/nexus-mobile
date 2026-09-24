@@ -4,10 +4,10 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.GridLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -23,7 +23,6 @@ class IconPickerActivity : Activity() {
             setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
         }
 
-        // Шапка
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -59,7 +58,6 @@ class IconPickerActivity : Activity() {
 
         val current = IconManager.getCurrent(this)
 
-        // Грид 2x2
         val grid = GridLayout(this).apply {
             columnCount = 2
             useDefaultMargins = true
@@ -74,23 +72,18 @@ class IconPickerActivity : Activity() {
                 isSelected = (style == current)
             }
 
-            // Превью иконки
-            val iconPreview = TextView(this).apply {
-                text = "N"
-                textSize = 40f
-                gravity = Gravity.CENTER
-                setTextColor(0xFFFFFFFF.toInt())
-                setBackgroundResource(style.drawable)
+            val iconPreview = ImageView(this).apply {
+                setImageResource(style.drawable)
+                scaleType = ImageView.ScaleType.FIT_CENTER
             }
             cell.addView(iconPreview, LinearLayout.LayoutParams(dp(80), dp(80)))
 
             cell.addView(TextView(this).apply {
                 text = style.displayName
-                textSize = 14f
+                textSize = 13f
                 setTextColor(resources.getColor(R.color.textPrimary, null))
-            }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(12) })
+            }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(10) })
 
-            // Галочка если активна
             if (style == current) {
                 cell.addView(TextView(this).apply {
                     text = "✓ текущая"
@@ -106,10 +99,10 @@ class IconPickerActivity : Activity() {
                 }
                 AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
                     .setTitle("Сменить иконку?")
-                    .setMessage("Иконка \"${style.displayName}\" появится в лаунчере. Может потребоваться пара секунд.")
+                    .setMessage("Иконка \"${style.displayName}\" появится в лаунчере через несколько секунд.")
                     .setPositiveButton("Сменить") { _, _ ->
                         IconManager.setCurrent(this@IconPickerActivity, style)
-                        Toast.makeText(this@IconPickerActivity, "Иконка изменена", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@IconPickerActivity, "Иконка изменена ✓", Toast.LENGTH_LONG).show()
                         finish()
                     }
                     .setNegativeButton("Отмена", null)
@@ -120,7 +113,7 @@ class IconPickerActivity : Activity() {
                 width = 0
                 height = WRAP_CONTENT
                 columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-                setMargins(dp(6), dp(6), dp(6), dp(6))
+                setMargins(dp(4), dp(4), dp(4), dp(4))
             }
             grid.addView(cell, params)
         }
@@ -128,7 +121,7 @@ class IconPickerActivity : Activity() {
         content.addView(grid, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         content.addView(TextView(this).apply {
-            text = "💡 Совет: после смены иконка может появиться в лаунчере через несколько секунд. Если не появилась — перезапустите лаунчер."
+            text = "💡 Совет: после смены иконка появится в лаунчере через 2-5 секунд. Если не появилась — перезапустите лаунчер."
             textSize = 12f
             setTextColor(resources.getColor(R.color.textMuted, null))
         }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(24) })
