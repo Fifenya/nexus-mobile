@@ -236,7 +236,7 @@ class ChatActivity : Activity() {
             setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
             divider = null
             dividerHeight = 0
-            stackFromBottom = true
+            transcriptMode = ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL
         }
         root.addView(listView, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
 
