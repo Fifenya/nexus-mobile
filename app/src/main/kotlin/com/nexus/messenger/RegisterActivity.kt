@@ -34,7 +34,6 @@ class RegisterActivity : Activity() {
         }
         scroll.addView(root, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // Заголовок
         root.addView(TextView(this).apply {
             text = "Создать аккаунт"
             textSize = 26f
@@ -53,7 +52,6 @@ class RegisterActivity : Activity() {
             bottomMargin = dp(40)
         })
 
-        // Поля
         val fields = mutableListOf<EditText>()
         val hints = listOf("Имя пользователя", "Email (необязательно)", "Пароль", "Повторите пароль")
         val types = listOf(1, 1, 0x81, 0x81)
@@ -75,7 +73,6 @@ class RegisterActivity : Activity() {
             fields.add(e)
         }
 
-        // Кнопка
         val btn = Button(this).apply {
             text = "Создать аккаунт"
             textSize = 16f
@@ -89,7 +86,6 @@ class RegisterActivity : Activity() {
             topMargin = dp(12)
         })
 
-        // Ссылка назад
         val link = TextView(this).apply {
             text = "Уже есть аккаунт? Войти"
             gravity = Gravity.CENTER
@@ -103,32 +99,46 @@ class RegisterActivity : Activity() {
         setContentView(scroll)
 
         btn.setOnClickListener {
-            val (u, e, p, p2) = fields.map { it.text.toString() }
+            val u = fields[0].text.toString().trim()
+            val em = fields[1].text.toString().trim()
+            val p = fields[2].text.toString()
+            val p2 = fields[3].text.toString()
             if (u.isEmpty() || p.isEmpty()) {
                 AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-                    .setMessage("Заполните обязательные поля").setPositiveButton("OK", null).show()
+                    .setMessage("Заполните обязательные поля")
+                    .setPositiveButton("OK", null)
+                    .show()
                 return@setOnClickListener
             }
             if (p != p2) {
                 AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-                    .setMessage("Пароли не совпадают").setPositiveButton("OK", null).show()
+                    .setMessage("Пароли не совпадают")
+                    .setPositiveButton("OK", null)
+                    .show()
                 return@setOnClickListener
             }
             btn.text = "Создание..."
             btn.isEnabled = false
-            Api.post("/auth/register", JSONObject().put("username", u).put("email", e).put("password", p)) { code, body ->
+            Api.post(
+                "/auth/register",
+                JSONObject().put("username", u).put("email", em).put("password", p)
+            ) { code, body ->
                 runOnUiThread {
                     btn.text = "Создать аккаунт"
                     btn.isEnabled = true
                     val j = Api.parseObj(body)
                     if ((code == 200 || code == 201) && j != null) {
-                        Store.token = j.optString("access_token").takeIf { it.isNotEmpty() } ?: j.optString("token")
+                        Store.token = j.optString("access_token").takeIf { it.isNotEmpty() }
+                            ?: j.optString("token")
                         j.optJSONObject("user")?.let { Store.user = User.fromJson(it) }
                         startActivity(Intent(this, ChatsActivity::class.java))
                         finish()
                     } else {
                         AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-                            .setTitle("Ошибка").setMessage(body).setPositiveButton("OK", null).show()
+                            .setTitle("Ошибка")
+                            .setMessage(Api.friendlyError(body))
+                            .setPositiveButton("OK", null)
+                            .show()
                     }
                 }
             }
