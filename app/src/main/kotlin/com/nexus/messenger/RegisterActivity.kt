@@ -52,9 +52,10 @@ class RegisterActivity : Activity() {
             bottomMargin = dp(40)
         })
 
+        // Три поля: имя, пароль, повтор
         val fields = mutableListOf<EditText>()
-        val hints = listOf("Имя пользователя", "Email (необязательно)", "Пароль", "Повторите пароль")
-        val types = listOf(1, 1, 0x81, 0x81)
+        val hints = listOf("Имя пользователя", "Пароль", "Повторите пароль")
+        val types = listOf(1, 0x81, 0x81)
 
         hints.forEachIndexed { i, hint ->
             val e = EditText(this).apply {
@@ -100,9 +101,8 @@ class RegisterActivity : Activity() {
 
         btn.setOnClickListener {
             val u = fields[0].text.toString().trim()
-            val em = fields[1].text.toString().trim()
-            val p = fields[2].text.toString()
-            val p2 = fields[3].text.toString()
+            val p = fields[1].text.toString()
+            val p2 = fields[2].text.toString()
             if (u.isEmpty() || p.isEmpty()) {
                 AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
                     .setMessage("Заполните обязательные поля")
@@ -121,7 +121,7 @@ class RegisterActivity : Activity() {
             btn.isEnabled = false
             Api.post(
                 "/auth/register",
-                JSONObject().put("username", u).put("email", em).put("password", p)
+                JSONObject().put("username", u).put("password", p)
             ) { code, body ->
                 runOnUiThread {
                     btn.text = "Создать аккаунт"
