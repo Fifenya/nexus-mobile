@@ -35,7 +35,6 @@ class LoginActivity : Activity() {
         }
         scroll.addView(root, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // Логотип
         val logo = TextView(this).apply {
             text = "N"
             textSize = 44f
@@ -66,7 +65,6 @@ class LoginActivity : Activity() {
             bottomMargin = dp(48)
         })
 
-        // Поле: имя пользователя
         val username = EditText(this).apply {
             hint = "Имя пользователя"
             setTextColor(resources.getColor(R.color.textPrimary, null))
@@ -80,7 +78,6 @@ class LoginActivity : Activity() {
             bottomMargin = dp(12)
         })
 
-        // Поле: пароль
         val password = EditText(this).apply {
             hint = "Пароль"
             inputType = 0x00000081
@@ -95,7 +92,6 @@ class LoginActivity : Activity() {
             bottomMargin = dp(24)
         })
 
-        // Кнопка: войти
         val btn = Button(this).apply {
             text = "Войти"
             textSize = 16f
@@ -107,7 +103,6 @@ class LoginActivity : Activity() {
         }
         root.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(52)))
 
-        // Ссылка: регистрация
         val link = TextView(this).apply {
             text = "Нет аккаунта? Создать"
             gravity = Gravity.CENTER
@@ -120,7 +115,6 @@ class LoginActivity : Activity() {
         }
         root.addView(link, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // Строка: адрес сервера (тап = диалог смены)
         val serverLink = TextView(this).apply {
             text = "🌐 Сервер: " + Store.apiBase
             gravity = Gravity.CENTER
@@ -145,7 +139,6 @@ class LoginActivity : Activity() {
 
         setContentView(scroll)
 
-        // Логика входа
         btn.setOnClickListener {
             val u = username.text.toString().trim()
             val p = password.text.toString()
@@ -165,8 +158,11 @@ class LoginActivity : Activity() {
                     if (code == 200 || code == 201) {
                         val j = Api.parseObj(body)
                         if (j != null) {
-                            Store.token = j.optString("access_token").takeIf { it.isNotEmpty() }
-                                ?: j.optString("token")
+                            // Бэкенд возвращает "accessToken" (camelCase).
+                            // Пробуем все варианты: accessToken, access_token, token.
+                            Store.token = j.optString("accessToken").takeIf { it.isNotEmpty() }
+                                ?: j.optString("access_token").takeIf { it.isNotEmpty() }
+                                ?: j.optString("token").takeIf { it.isNotEmpty() }
                             j.optJSONObject("user")?.let { Store.user = User.fromJson(it) }
                             startActivity(Intent(this, ChatsActivity::class.java))
                             finish()
@@ -183,7 +179,6 @@ class LoginActivity : Activity() {
         }
     }
 
-    /** Диалог смены адреса сервера прямо с экрана входа */
     private fun showServerDialog() {
         val input = EditText(this).apply {
             setText(Store.apiBase)
