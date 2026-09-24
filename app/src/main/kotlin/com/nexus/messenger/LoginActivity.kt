@@ -5,7 +5,6 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.Button
@@ -35,7 +34,7 @@ class LoginActivity : Activity() {
         }
         scroll.addView(root, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // ─── Логотип ───
+        // Логотип
         val logo = TextView(this).apply {
             text = "N"
             textSize = 44f
@@ -49,13 +48,11 @@ class LoginActivity : Activity() {
             bottomMargin = dp(24)
         })
 
-        // ─── Заголовок ───
         root.addView(TextView(this).apply {
             text = "Nexus"
             textSize = 32f
             setTextColor(resources.getColor(R.color.textPrimary, null))
             gravity = Gravity.CENTER
-            paintFlags = paintFlags or android.graphics.Paint.ANTI_ALIAS_FLAG
         }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         root.addView(TextView(this).apply {
@@ -68,7 +65,7 @@ class LoginActivity : Activity() {
             bottomMargin = dp(48)
         })
 
-        // ─── Поле: Имя пользователя ───
+        // Поле: имя пользователя
         val username = EditText(this).apply {
             hint = "Имя пользователя"
             setTextColor(resources.getColor(R.color.textPrimary, null))
@@ -82,7 +79,7 @@ class LoginActivity : Activity() {
             bottomMargin = dp(12)
         })
 
-        // ─── Поле: Пароль ───
+        // Поле: пароль
         val password = EditText(this).apply {
             hint = "Пароль"
             inputType = 0x00000081
@@ -97,7 +94,7 @@ class LoginActivity : Activity() {
             bottomMargin = dp(24)
         })
 
-        // ─── Кнопка: Войти ───
+        // Кнопка: войти
         val btn = Button(this).apply {
             text = "Войти"
             textSize = 16f
@@ -109,7 +106,7 @@ class LoginActivity : Activity() {
         }
         root.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(52)))
 
-        // ─── Ссылка: Регистрация ───
+        // Ссылка: регистрация
         val link = TextView(this).apply {
             text = "Нет аккаунта? Создать"
             gravity = Gravity.CENTER
@@ -122,7 +119,6 @@ class LoginActivity : Activity() {
         }
         root.addView(link, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // ─── Версия ───
         root.addView(TextView(this).apply {
             text = "Nexus Messenger v1.0.0"
             gravity = Gravity.CENTER
@@ -134,7 +130,7 @@ class LoginActivity : Activity() {
 
         setContentView(scroll)
 
-        // ─── Логика ───
+        // Логика входа
         btn.setOnClickListener {
             val u = username.text.toString().trim()
             val p = password.text.toString()
@@ -164,7 +160,7 @@ class LoginActivity : Activity() {
                     }
                     AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
                         .setTitle("Ошибка входа")
-                        .setMessage(body)
+                        .setMessage(Api.friendlyError(body))
                         .setPositiveButton("OK", null)
                         .show()
                 }
