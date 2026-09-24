@@ -148,7 +148,6 @@ class ChatActivity : Activity() {
                         if (isOwn) R.drawable.bg_bubble_own else R.drawable.bg_bubble_other
                     )
                     setPadding(dp(14), dp(10), dp(14), dp(8))
-                    maxWidth = dp(280)
                 }
 
                 // Имя автора (для чужих в группах)
