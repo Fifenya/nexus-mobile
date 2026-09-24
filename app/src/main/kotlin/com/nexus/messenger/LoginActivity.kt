@@ -76,7 +76,7 @@ class LoginActivity : Activity() {
             setBackgroundResource(R.drawable.bg_input)
             setPadding(dp(16), dp(14), dp(16), dp(14))
             textSize = 16f
-            singleLine = true
+            maxLines = 1
         }
         root.addView(username, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
             bottomMargin = dp(12)
