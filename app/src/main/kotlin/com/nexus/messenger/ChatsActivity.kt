@@ -65,7 +65,7 @@ class ChatsActivity : Activity() {
             setBackgroundResource(R.drawable.bg_search)
             setPadding(dp(16), dp(12), dp(16), dp(12))
             textSize = 15f
-            singleLine = true
+            maxLines = 1
         }
         root.addView(searchInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
             setMargins(dp(16), dp(4), dp(16), dp(8))
