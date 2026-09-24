@@ -16,12 +16,13 @@ object Api {
 
     /**
      * При старте получаем актуальный URL туннеля с GitHub Pages.
-     * Если не получилось — оставляем то, что сохранено в Store.
+     * ?nocache=... обходит кэш CDN GitHub Pages.
      */
     fun resolveServer(onDone: () -> Unit) {
         exec.execute {
             try {
-                val conn = URL(URL_DISPATCHER).openConnection() as HttpURLConnection
+                val conn = URL("$URL_DISPATCHER?nocache=${System.currentTimeMillis()}")
+                    .openConnection() as HttpURLConnection
                 conn.connectTimeout = 8000
                 conn.readTimeout = 8000
                 if (conn.responseCode == 200) {
@@ -35,6 +36,23 @@ object Api {
                 // fallback — используем сохранённый адрес
             }
             onDone()
+        }
+    }
+
+    /** Человекочитаемые ошибки вместо сырого HTML Cloudflare */
+    fun friendlyError(body: String): String {
+        return when {
+            body.contains("error code: 1033") ->
+                "Туннель пересоздаётся (1033). Подождите ~1 минуту и повторите."
+            body.contains("error code: 1027") ->
+                "Слишком много запросов к туннелю (1027). Подождите пару минут."
+            body.contains("error code: 10") ->
+                "Cloudflare недоступен. Проверьте интернет."
+            body.trim().startsWith("<") ->
+                "Сервер вернул не JSON — туннель, скорее всего, мёртв."
+            body.isEmpty() ->
+                "Нет ответа от сервера."
+            else -> body
         }
     }
 
