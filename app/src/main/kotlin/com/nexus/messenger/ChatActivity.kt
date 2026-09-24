@@ -3,30 +3,33 @@ package com.nexus.messenger
 import android.app.Activity
 import android.app.AlertDialog
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.*
 import com.nexus.messenger.data.Api
 import com.nexus.messenger.data.Message
 import com.nexus.messenger.data.Store
+import com.nexus.messenger.ui.dp
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 
 class ChatActivity : Activity() {
     private lateinit var chatId: String
-    private lateinit var titleText: TextView
-    private lateinit var list: ListView
+    private lateinit var listView: ListView
     private lateinit var input: EditText
-    private lateinit var sendBtn: Button
+    private lateinit var sendBtn: TextView
     private lateinit var replyBar: LinearLayout
-    private lateinit var replyText: TextView
+    private lateinit var replyPreview: TextView
+    private lateinit var replyLabel: TextView
     private val messages = mutableListOf<Message>()
     private var replyTo: Message? = null
     private var editing: Message? = null
+    private lateinit var msgAdapter: ArrayAdapter<Message>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,168 +41,273 @@ class ChatActivity : Activity() {
             setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
         }
 
+        // ─── Шапка ───
         val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
-            setPadding(16, 24, 16, 24)
+            setPadding(dp(8), dp(10), dp(12), dp(10))
         }
-        val back = Button(this).apply {
-            text = "←"; setBackgroundColor(Color.TRANSPARENT)
-            setTextColor(resources.getColor(R.color.accent, null)); textSize = 22f
-        }
-        back.setOnClickListener { finish() }
-        header.addView(back)
-        titleText = TextView(this).apply {
-            text = title; textSize = 18f
-            setTextColor(resources.getColor(R.color.textPrimary, null))
-        }
-        header.addView(titleText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = 16 })
-        root.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        replyBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; visibility = View.GONE
-            setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
-            setPadding(24, 12, 24, 12)
+        val backBtn = TextView(this).apply {
+            text = "←"
+            textSize = 24f
+            setTextColor(resources.getColor(R.color.accent, null))
+            setPadding(dp(12), dp(4), dp(12), dp(4))
         }
-        val replyContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val replyLabel = TextView(this).apply {
-            text = "↩️ Ответ"; textSize = 12f
+        backBtn.setOnClickListener { finish() }
+        header.addView(backBtn)
+
+        // Аватарка в шапке
+        val headerAvatar = TextView(this).apply {
+            text = title.take(1).uppercase()
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setTextColor(resources.getColor(R.color.textPrimary, null))
+            setBackgroundResource(R.drawable.bg_avatar)
+        }
+        header.addView(headerAvatar, LinearLayout.LayoutParams(dp(40), dp(40)))
+
+        val headerInfo = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        headerInfo.addView(TextView(this).apply {
+            text = title
+            textSize = 17f
+            setTextColor(resources.getColor(R.color.textPrimary, null))
+            maxLines = 1
+        })
+        headerInfo.addView(TextView(this).apply {
+            text = "в сети"
+            textSize = 12f
+            setTextColor(resources.getColor(R.color.online, null))
+        })
+        header.addView(headerInfo, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply {
+            leftMargin = dp(10)
+        })
+
+        val menuBtn = TextView(this).apply {
+            text = "⋮"
+            textSize = 22f
+            setTextColor(resources.getColor(R.color.textSecondary, null))
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+        }
+        header.addView(menuBtn)
+        root.addView(header, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
+        // ─── Reply bar ───
+        replyBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = View.GONE
+            setBackgroundResource(R.drawable.bg_reply_bar)
+            setPadding(dp(16), dp(8), dp(8), dp(8))
+        }
+        val replyContent = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        replyLabel = TextView(this).apply {
+            textSize = 12f
             setTextColor(resources.getColor(R.color.accent, null))
         }
-        replyText = TextView(this).apply {
-            textSize = 13f; setTextColor(resources.getColor(R.color.textSecondary, null))
+        replyPreview = TextView(this).apply {
+            textSize = 13f
+            setTextColor(resources.getColor(R.color.textSecondary, null))
             maxLines = 1
         }
         replyContent.addView(replyLabel)
-        replyContent.addView(replyText)
-        replyBar.addView(replyContent, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        val closeReply = Button(this).apply {
-            text = "✕"; setBackgroundColor(Color.TRANSPARENT)
+        replyContent.addView(replyPreview)
+        replyBar.addView(replyContent, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        val closeReply = TextView(this).apply {
+            text = "✕"
+            textSize = 18f
             setTextColor(resources.getColor(R.color.textMuted, null))
+            setPadding(dp(12), dp(4), dp(12), dp(4))
         }
         closeReply.setOnClickListener { clearAction() }
         replyBar.addView(closeReply)
-        root.addView(replyBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(replyBar, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+            setMargins(dp(12), dp(6), dp(12), dp(2))
+        })
 
-        val adapter = object : ArrayAdapter<Message>(this@ChatActivity, 0, messages) {
+        // ─── Адаптер сообщений ───
+        msgAdapter = object : ArrayAdapter<Message>(this@ChatActivity, 0, messages) {
             override fun getView(pos: Int, cv: View?, parent: ViewGroup): View {
                 val msg = getItem(pos)!!
                 val isOwn = msg.authorId == Store.user?.id
+
                 val wrap = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
-                    setPadding(0, 8, 0, 8)
+                    setPadding(dp(12), dp(3), dp(12), dp(3))
                     gravity = if (isOwn) Gravity.END else Gravity.START
                 }
+
                 val bubble = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
-                    val bg = GradientDrawable().apply {
-                        setColor(resources.getColor(if (isOwn) R.color.messageOwn else R.color.messageOther, null))
-                        cornerRadius = 40f
-                    }
-                    background = bg
-                    setPadding(28, 16, 28, 16)
+                    setBackgroundResource(
+                        if (isOwn) R.drawable.bg_bubble_own else R.drawable.bg_bubble_other
+                    )
+                    setPadding(dp(14), dp(10), dp(14), dp(8))
+                    maxWidth = dp(280)
                 }
 
+                // Имя автора (для чужих в группах)
+                if (!isOwn) {
+                    bubble.addView(TextView(context).apply {
+                        text = msg.authorName
+                        textSize = 12f
+                        setTextColor(resources.getColor(R.color.accent, null))
+                    }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+                        bottomMargin = dp(2)
+                    })
+                }
+
+                // Reply внутри пузыря
                 if (msg.replyText != null) {
-                    val replyWrap = LinearLayout(context).apply {
-                        orientation = LinearLayout.VERTICAL
-                        setPadding(16, 4, 8, 8)
+                    val replyBox = LinearLayout(context).apply {
+                        orientation = LinearLayout.HORIZONTAL
                     }
-                    replyWrap.addView(TextView(context).apply {
-                        text = msg.replyAuthor ?: "—"; textSize = 11f
-                        setTextColor(resources.getColor(R.color.textPrimary, null))
-                    })
-                    replyWrap.addView(TextView(context).apply {
-                        text = msg.replyText; textSize = 12f; maxLines = 2
-                        setTextColor(resources.getColor(R.color.textSecondary, null))
-                    })
                     val bar = View(context).apply {
                         setBackgroundColor(resources.getColor(R.color.textPrimary, null))
                     }
-                    val h = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-                    h.addView(bar, LinearLayout.LayoutParams(4, ViewGroup.LayoutParams.MATCH_PARENT))
-                    h.addView(replyWrap)
-                    bubble.addView(h)
+                    replyBox.addView(bar, LinearLayout.LayoutParams(dp(3), MATCH_PARENT))
+                    val replyInfo = LinearLayout(context).apply {
+                        orientation = LinearLayout.VERTICAL
+                    }
+                    replyInfo.addView(TextView(context).apply {
+                        text = msg.replyAuthor ?: ""
+                        textSize = 11f
+                        setTextColor(resources.getColor(R.color.textPrimary, null))
+                    })
+                    replyInfo.addView(TextView(context).apply {
+                        text = msg.replyText
+                        textSize = 12f
+                        maxLines = 2
+                        setTextColor(resources.getColor(R.color.textSecondary, null))
+                    })
+                    replyBox.addView(replyInfo, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+                        leftMargin = dp(8)
+                    })
+                    bubble.addView(replyBox, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+                        bottomMargin = dp(6)
+                    })
                 }
 
+                // Текст сообщения
                 bubble.addView(TextView(context).apply {
-                    text = msg.text; textSize = 15f
+                    text = msg.text
+                    textSize = 15f
                     setTextColor(resources.getColor(R.color.textPrimary, null))
                 })
 
-                val meta = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
+                // Мета (время + edited)
+                val meta = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                }
                 if (msg.updatedAt != null) {
                     meta.addView(TextView(context).apply {
-                        text = "изм."; textSize = 10f
-                        setTextColor(resources.getColor(R.color.textMuted, null))
+                        text = "изм. · "
+                        textSize = 10f
+                        setTextColor(
+                            if (isOwn) Color.parseColor("#99ffffff")
+                            else resources.getColor(R.color.textMuted, null)
+                        )
                     })
                 }
                 meta.addView(TextView(context).apply {
-                    text = formatTime(msg.createdAt); textSize = 10f
-                    setTextColor(resources.getColor(R.color.textMuted, null))
+                    text = formatTime(msg.createdAt)
+                    textSize = 10f
+                    setTextColor(
+                        if (isOwn) Color.parseColor("#99ffffff")
+                        else resources.getColor(R.color.textMuted, null)
+                    )
                 })
-                bubble.addView(meta)
+                bubble.addView(meta, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+                    topMargin = dp(2)
+                })
 
                 wrap.addView(bubble)
                 return wrap
             }
         }
 
-        list = ListView(this).apply {
-            this.adapter = adapter
+        listView = ListView(this).apply {
+            adapter = msgAdapter
             setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
             divider = null
+            dividerHeight = 0
+            stackFromBottom = true
         }
-        root.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(listView, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
 
+        // ─── Поле ввода ───
         val inputBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
-            setPadding(16, 12, 16, 12)
+            setPadding(dp(10), dp(8), dp(10), dp(8))
         }
+
+        val attachBtn = TextView(this).apply {
+            text = "📎"
+            textSize = 22f
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+        }
+        inputBar.addView(attachBtn)
+
         input = EditText(this).apply {
-            hint = "Сообщение"; setTextColor(resources.getColor(R.color.textPrimary, null))
+            hint = "Сообщение"
+            setTextColor(resources.getColor(R.color.textPrimary, null))
             setHintTextColor(resources.getColor(R.color.textMuted, null))
-            setBackgroundColor(resources.getColor(R.color.bgInput, null))
-            setPadding(24, 16, 24, 16)
+            setBackgroundResource(R.drawable.bg_search)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            textSize = 15f
         }
-        inputBar.addView(input, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-            setMargins(0, 0, 12, 0)
+        inputBar.addView(input, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply {
+            setMargins(dp(6), 0, dp(8), 0)
         })
-        sendBtn = Button(this).apply {
-            text = "➤"; setTextColor(resources.getColor(R.color.textPrimary, null))
-            setBackgroundColor(resources.getColor(R.color.accent, null))
+
+        sendBtn = TextView(this).apply {
+            text = "➤"
+            textSize = 20f
+            gravity = Gravity.CENTER
+            setTextColor(resources.getColor(R.color.textPrimary, null))
+            setBackgroundResource(R.drawable.bg_fab)
         }
         sendBtn.setOnClickListener { send() }
-        inputBar.addView(sendBtn, LinearLayout.LayoutParams(100, 100))
-        root.addView(inputBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        inputBar.addView(sendBtn, LinearLayout.LayoutParams(dp(44), dp(44)))
+
+        root.addView(inputBar, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         setContentView(root)
 
-        list.setOnItemLongClickListener { _, _, pos, _ ->
-            val msg = adapter.getItem(pos) ?: return@setOnItemLongClickListener true
+        // ─── Долгое нажатие на сообщение ───
+        listView.setOnItemLongClickListener { _, _, pos, _ ->
+            val msg = msgAdapter.getItem(pos) ?: return@setOnItemLongClickListener true
             val isOwn = msg.authorId == Store.user?.id
             val actions = mutableListOf("↩️ Ответить")
             if (isOwn) { actions.add("✏️ Редактировать"); actions.add("🗑️ Удалить") }
 
-            AlertDialog.Builder(this)
-                .setTitle("Действие")
+            AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
                 .setItems(actions.toTypedArray()) { _, i ->
                     when (actions[i]) {
                         "↩️ Ответить" -> {
                             replyTo = msg; editing = null
                             replyBar.visibility = View.VISIBLE
-                            replyText.text = msg.text
-                            input.hint = "Ответ..."
+                            replyLabel.text = "↩️ ${msg.authorName}"
+                            replyPreview.text = msg.text
                         }
                         "✏️ Редактировать" -> {
                             editing = msg; replyTo = null
                             input.setText(msg.text)
-                            input.hint = "Редактирование..."
                             sendBtn.text = "✓"
+                            replyBar.visibility = View.VISIBLE
+                            replyLabel.text = "✏️ Редактирование"
+                            replyPreview.text = msg.text
                         }
                         "🗑️ Удалить" -> {
-                            AlertDialog.Builder(this)
+                            AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
                                 .setMessage("Удалить сообщение?")
                                 .setPositiveButton("Удалить") { _, _ ->
                                     Api.delete("/messages/${msg.id}") { _, _ -> loadMessages() }
@@ -247,9 +355,7 @@ class ChatActivity : Activity() {
                 if (code == 200) {
                     val arr = Api.parseArray(body)
                     for (i in 0 until arr.length()) messages.add(Message.fromJson(arr.getJSONObject(i)))
-                    @Suppress("UNCHECKED_CAST")
-                    (list.adapter as ArrayAdapter<Message>).notifyDataSetChanged()
-                    list.setSelection(messages.size - 1)
+                    msgAdapter.notifyDataSetChanged()
                 }
             }
         }
