@@ -10,7 +10,6 @@
         android:theme="@style/NexusTheme"
         android:usesCleartextTraffic="true">
         
-        <!-- Главный Activity (без LAUNCHER) -->
         <activity android:name=".MainActivity" android:exported="true" />
         <activity android:name=".LoginActivity" />
         <activity android:name=".RegisterActivity" />
@@ -21,7 +20,6 @@
         <activity android:name=".BotsActivity" />
         <activity android:name=".IconPickerActivity" />
 
-        <!-- Alias'ы для иконок в лаунчере -->
         <activity-alias
             android:name=".MainActivityDefault"
             android:targetActivity=".MainActivity"
@@ -46,7 +44,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-filter>
         </activity-alias>
 
         <activity-alias
