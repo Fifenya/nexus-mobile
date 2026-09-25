@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import com.nexus.messenger.ui.Ui
 import com.nexus.messenger.ui.dp
 
 class IconPickerActivity : Activity() {
@@ -23,83 +24,95 @@ class IconPickerActivity : Activity() {
             setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
         }
 
+        // Шапка
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
-            setPadding(dp(16), dp(32), dp(16), dp(16))
+            setPadding(dp(8), dp(14), dp(16), dp(10))
         }
         val back = TextView(this).apply {
             text = "←"
             textSize = 24f
-            setTextColor(resources.getColor(R.color.accent, null))
+            setTextColor(resources.getColor(R.color.accentText, null))
             setPadding(dp(12), dp(8), dp(12), dp(8))
         }
         back.setOnClickListener { finish() }
         header.addView(back)
-        header.addView(TextView(this).apply {
-            text = "Иконка приложения"
-            textSize = 20f
-            setTextColor(resources.getColor(R.color.textPrimary, null))
-        }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(16) })
+        header.addView(
+            Ui.text(this, "Иконка приложения", 20f, R.color.textPrimary, true),
+            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(8) }
+        )
         root.addView(header, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         val scroll = ScrollView(this)
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(16), dp(16), dp(32))
+            setPadding(dp(16), dp(8), dp(16), dp(32))
         }
-
-        content.addView(TextView(this).apply {
-            text = "Выберите стиль иконки в лаунчере"
-            textSize = 14f
-            setTextColor(resources.getColor(R.color.textSecondary, null))
-        }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = dp(16) })
 
         val current = IconManager.getCurrent(this)
 
-        val grid = GridLayout(this).apply {
-            columnCount = 2
-            useDefaultMargins = true
+        // Крупное превью текущей иконки
+        val previewWrap = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(16), dp(16), dp(16), dp(20))
+            background = Ui.card(this@IconPickerActivity)
         }
+        val bigPreview = ImageView(this).apply {
+            setImageResource(current.drawable)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+        }
+        previewWrap.addView(bigPreview, LinearLayout.LayoutParams(dp(96), dp(96)))
+        previewWrap.addView(
+            Ui.text(this, "Сейчас: ${current.displayName}", 14f, R.color.textSecondary),
+            LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(10) }
+        )
+        content.addView(previewWrap, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
+        content.addView(
+            Ui.text(this, "Выберите стиль", 13f, R.color.accentText, true),
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(20); bottomMargin = dp(8) }
+        )
+
+        // Сетка 2 колонки
+        val grid = GridLayout(this).apply { columnCount = 2 }
 
         IconManager.IconStyle.values().forEach { style ->
+            val isActive = style == current
             val cell = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setBackgroundResource(R.drawable.icon_selector)
-                setPadding(dp(12), dp(16), dp(12), dp(16))
-                isSelected = (style == current)
+                background = Ui.card(this@IconPickerActivity)
+                setPadding(dp(12), dp(16), dp(12), dp(14))
             }
 
-            val iconPreview = ImageView(this).apply {
+            val icon = ImageView(this).apply {
                 setImageResource(style.drawable)
                 scaleType = ImageView.ScaleType.FIT_CENTER
             }
-            cell.addView(iconPreview, LinearLayout.LayoutParams(dp(80), dp(80)))
+            cell.addView(icon, LinearLayout.LayoutParams(dp(72), dp(72)))
 
-            cell.addView(TextView(this).apply {
-                text = style.displayName
-                textSize = 13f
-                setTextColor(resources.getColor(R.color.textPrimary, null))
-            }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(10) })
+            cell.addView(
+                Ui.text(this, style.displayName, 13f, R.color.textPrimary),
+                LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(10) }
+            )
 
-            if (style == current) {
-                cell.addView(TextView(this).apply {
-                    text = "✓ текущая"
-                    textSize = 11f
-                    setTextColor(resources.getColor(R.color.accent, null))
-                }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(4) })
+            if (isActive) {
+                cell.addView(
+                    Ui.text(this, "✓ текущая", 11f, R.color.accentText),
+                    LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(2) }
+                )
             }
 
             cell.setOnClickListener {
-                if (style == current) {
+                if (isActive) {
                     Toast.makeText(this@IconPickerActivity, "Уже выбрано", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
                 AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
                     .setTitle("Сменить иконку?")
-                    .setMessage("Иконка \"${style.displayName}\" появится в лаунчере через несколько секунд.")
+                    .setMessage("Иконка «${style.displayName}» появится в лаунчере через несколько секунд. Название приложения останется «Nexus».")
                     .setPositiveButton("Сменить") { _, _ ->
                         IconManager.setCurrent(this@IconPickerActivity, style)
                         Toast.makeText(this@IconPickerActivity, "Иконка изменена ✓", Toast.LENGTH_LONG).show()
@@ -120,15 +133,13 @@ class IconPickerActivity : Activity() {
 
         content.addView(grid, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        content.addView(TextView(this).apply {
-            text = "💡 Совет: после смены иконка появится в лаунчере через 2-5 секунд. Если не появилась — перезапустите лаунчер."
-            textSize = 12f
-            setTextColor(resources.getColor(R.color.textMuted, null))
-        }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(24) })
+        content.addView(
+            Ui.text(this, "💡 Иконка может появиться в лаунчере через 2-5 секунд. Если не появилась — перезапустите лаунчер.", 12f, R.color.textMuted),
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(20) }
+        )
 
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
-
         setContentView(root)
     }
 }

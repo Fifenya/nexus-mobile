@@ -9,7 +9,7 @@
         android:label="Nexus"
         android:theme="@style/NexusTheme"
         android:usesCleartextTraffic="true">
-        
+
         <activity android:name=".MainActivity" android:exported="true" />
         <activity android:name=".LoginActivity" />
         <activity android:name=".RegisterActivity" />
@@ -36,7 +36,7 @@
         <activity-alias
             android:name=".MainActivityNeon"
             android:targetActivity=".MainActivity"
-            android:label="@string/app_name_neon"
+            android:label="@string/app_name"
             android:icon="@drawable/neon"
             android:enabled="false"
             android:exported="true">
@@ -49,7 +49,7 @@
         <activity-alias
             android:name=".MainActivityCrimson"
             android:targetActivity=".MainActivity"
-            android:label="@string/app_name_crimson"
+            android:label="@string/app_name"
             android:icon="@drawable/crimson"
             android:enabled="false"
             android:exported="true">
@@ -62,7 +62,7 @@
         <activity-alias
             android:name=".MainActivityLight"
             android:targetActivity=".MainActivity"
-            android:label="@string/app_name_light"
+            android:label="@string/app_name"
             android:icon="@drawable/light"
             android:enabled="false"
             android:exported="true">
@@ -75,7 +75,7 @@
         <activity-alias
             android:name=".MainActivityEmboss"
             android:targetActivity=".MainActivity"
-            android:label="@string/app_name_emboss"
+            android:label="@string/app_name"
             android:icon="@drawable/emboss"
             android:enabled="false"
             android:exported="true">
@@ -88,7 +88,7 @@
         <activity-alias
             android:name=".MainActivityLine"
             android:targetActivity=".MainActivity"
-            android:label="@string/app_name_line"
+            android:label="@string/app_name"
             android:icon="@drawable/line"
             android:enabled="false"
             android:exported="true">
@@ -101,7 +101,7 @@
         <activity-alias
             android:name=".MainActivityBubble"
             android:targetActivity=".MainActivity"
-            android:label="@string/app_name_bubble"
+            android:label="@string/app_name"
             android:icon="@drawable/bubble"
             android:enabled="false"
             android:exported="true">

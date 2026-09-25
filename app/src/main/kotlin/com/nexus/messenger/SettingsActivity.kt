@@ -69,7 +69,7 @@ class SettingsActivity : Activity() {
         avatarWrap.addView(camBadge, FrameLayout.LayoutParams(dp(30), dp(30)).apply {
             gravity = Gravity.BOTTOM or Gravity.END
         })
-        head.addView(avatarWrap)
+        head.addView(avatarWrap, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
         head.addView(
             Ui.text(this, Store.user?.username ?: "Гость", 22f, R.color.textPrimary, true),
             LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(14) }
@@ -80,10 +80,8 @@ class SettingsActivity : Activity() {
         )
         content.addView(head, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // Заглушка для разделов без бэкенда
         val soon = { Toast.makeText(this, "Появится в следующем обновлении", Toast.LENGTH_SHORT).show() }
 
-        // Карточка 1: основные разделы
         addCard(content, listOf(
             row(R.drawable.ic_person, BLUE, "Аккаунт", "Имя, пользователь, «О себе»", onClick = {
                 startActivity(Intent(this, ProfileActivity::class.java))
@@ -97,7 +95,6 @@ class SettingsActivity : Activity() {
             row(R.drawable.ic_globe, PURPLE, "Язык", "Русский", onClick = soon)
         ))
 
-        // Карточка 2: фирменное Nexus
         addCard(content, listOf(
             row(R.drawable.ic_bot, ORANGE, "Боты", "Создание и управление ботами", onClick = {
                 startActivity(Intent(this, BotsActivity::class.java))
@@ -106,11 +103,13 @@ class SettingsActivity : Activity() {
             row(R.drawable.ic_palette, PINK, "Темы оформления", "Цветовые темы интерфейса", onClick = soon),
             row(R.drawable.ic_grid, INDIGO, "Иконка приложения", "Смена иконки в лаунчере", onClick = {
                 startActivity(Intent(this, IconPickerActivity::class.java))
+            }, trailing = ImageView(this).apply {
+                setImageResource(IconManager.getCurrent(this@SettingsActivity).drawable)
+                scaleType = ImageView.ScaleType.FIT_CENTER
             }),
             row(R.drawable.ic_device, RED, "Сервер", Store.apiBase, onClick = { showServerDialog() })
         ))
 
-        // Карточка 3: выход
         addCard(content, listOf(
             row(R.drawable.ic_close, RED, "Выйти", null, onClick = {
                 AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
@@ -147,7 +146,8 @@ class SettingsActivity : Activity() {
         title: String,
         subtitle: String?,
         onClick: () -> Unit,
-        titleColorRes: Int = R.color.textPrimary
+        titleColorRes: Int = R.color.textPrimary,
+        trailing: View? = null
     ): View {
         val ctx = this
         val v = LinearLayout(ctx).apply {
@@ -155,22 +155,23 @@ class SettingsActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(10), dp(16), dp(10))
         }
-        v.addView(
-            Ui.tileIcon(ctx, iconRes, tileColor),
-            LinearLayout.LayoutParams(dp(40), dp(40))
-        )
+        v.addView(Ui.tileIcon(ctx, iconRes, tileColor), LinearLayout.LayoutParams(dp(40), dp(40)))
         val mid = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        // ВАЖНО: mid вертикальный, поэтому ширина детей MATCH_PARENT, а не 0+weight
         mid.addView(
             Ui.text(ctx, title, 16f, titleColorRes),
-            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
         )
         if (subtitle != null) {
             mid.addView(
                 Ui.text(ctx, subtitle, 13f, R.color.textSecondary),
-                LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { topMargin = dp(2) }
+                LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(2) }
             )
         }
         v.addView(mid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(16) })
+        if (trailing != null) {
+            v.addView(trailing, LinearLayout.LayoutParams(dp(32), dp(32)))
+        }
         v.setOnClickListener { onClick() }
         return v
     }

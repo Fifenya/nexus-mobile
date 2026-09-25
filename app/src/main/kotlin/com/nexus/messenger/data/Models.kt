@@ -2,6 +2,13 @@ package com.nexus.messenger.data
 
 import org.json.JSONObject
 
+/** Безопасное чтение строки: отсутствует / null / "null" / "" → null */
+private fun str(j: JSONObject, key: String): String? {
+    if (!j.has(key) || j.isNull(key)) return null
+    val v = j.optString(key, "")
+    return if (v.isEmpty() || v == "null") null else v
+}
+
 data class User(
     val id: String,
     val username: String,
@@ -13,13 +20,13 @@ data class User(
 ) {
     companion object {
         fun fromJson(j: JSONObject) = User(
-            j.optString("id"),
-            j.optString("username"),
-            j.optString("displayName").takeIf { it.isNotEmpty() },
-            j.optString("email").takeIf { it.isNotEmpty() },
-            j.optString("avatar").takeIf { it.isNotEmpty() },
+            str(j, "id") ?: "",
+            str(j, "username") ?: "",
+            str(j, "displayName"),
+            str(j, "email"),
+            str(j, "avatar") ?: str(j, "avatarUrl"),
             j.optBoolean("online"),
-            j.optString("bio").takeIf { it.isNotEmpty() }
+            str(j, "bio")
         )
     }
 }
@@ -34,15 +41,18 @@ data class Chat(
     val unreadCount: Int = 0
 ) {
     companion object {
-        fun fromJson(j: JSONObject) = Chat(
-            j.optString("id"),
-            j.optString("title").takeIf { it.isNotEmpty() },
-            j.optString("type").takeIf { it.isNotEmpty() },
-            j.optBoolean("pinned"),
-            j.optJSONObject("lastMessage")?.optString("text"),
-            j.optJSONObject("lastMessage")?.optString("createdAt"),
-            j.optInt("unreadCount")
-        )
+        fun fromJson(j: JSONObject): Chat {
+            val lm = j.optJSONObject("lastMessage")
+            return Chat(
+                str(j, "id") ?: "",
+                str(j, "title"),
+                str(j, "type"),
+                j.optBoolean("pinned"),
+                lm?.let { str(it, "text") },
+                lm?.let { str(it, "createdAt") },
+                j.optInt("unreadCount")
+            )
+        }
     }
 }
 
@@ -62,15 +72,15 @@ data class Message(
             val author = j.optJSONObject("author") ?: JSONObject()
             val reply = j.optJSONObject("replyTo")
             return Message(
-                j.optString("id"),
-                j.optString("text"),
-                j.optString("createdAt"),
-                j.optString("updatedAt").takeIf { it.isNotEmpty() },
-                author.optString("id"),
-                author.optString("username"),
-                reply?.optString("id")?.takeIf { it.isNotEmpty() },
-                reply?.optString("text"),
-                reply?.optString("author")
+                str(j, "id") ?: "",
+                str(j, "text") ?: "",
+                str(j, "createdAt") ?: "",
+                str(j, "updatedAt"),
+                str(author, "id") ?: "",
+                str(author, "username") ?: "",
+                reply?.let { str(it, "id") },
+                reply?.let { str(it, "text") },
+                reply?.let { str(it, "author") }
             )
         }
     }
