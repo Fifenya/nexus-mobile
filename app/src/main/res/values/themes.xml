@@ -2,7 +2,7 @@
 <resources>
     <style name="NexusTheme" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/bgPrimary</item>
-        <item name="android:statusBarColor">@color/bgSecondary</item>
+        <item name="android:statusBarColor">@color/bgPrimary</item>
         <item name="android:navigationBarColor">@color/bgPrimary</item>
         <item name="android:textColorPrimary">@color/textPrimary</item>
         <item name="android:textColorSecondary">@color/textSecondary</item>
