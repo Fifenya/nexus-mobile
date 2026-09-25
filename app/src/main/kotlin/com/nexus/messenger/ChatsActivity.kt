@@ -3,19 +3,29 @@ package com.nexus.messenger
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-import android.widget.*
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ListView
+import android.widget.TextView
+import android.widget.Toast
 import com.nexus.messenger.data.Api
 import com.nexus.messenger.data.Chat
+import com.nexus.messenger.ui.BottomNav
+import com.nexus.messenger.ui.Ui
 import com.nexus.messenger.ui.dp
 import org.json.JSONObject
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 class ChatsActivity : Activity() {
     private lateinit var listView: ListView
@@ -23,174 +33,164 @@ class ChatsActivity : Activity() {
     private val chats = mutableListOf<Chat>()
     private lateinit var chatAdapter: ArrayAdapter<Chat>
 
+    private val avatarColors = intArrayOf(
+        0xFFE17076.toInt(), 0xFF7BC862.toInt(), 0xFF65AADD.toInt(),
+        0xFFA695E7.toInt(), 0xFFEE7AAE.toInt(), 0xFF6EC9CB.toInt(), 0xFFFAA774.toInt()
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
-        }
+        val frame = FrameLayout(this)
+        frame.setBackgroundColor(color(R.color.bgPrimary))
 
-        // ─── Шапка ───
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+
+        // ── Шапка: лого + название + меню ──
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
-            setPadding(dp(20), dp(16), dp(12), dp(12))
+            setPadding(dp(16), dp(14), dp(8), dp(10))
         }
-        header.addView(TextView(this).apply {
-            text = "Чаты"
-            textSize = 28f
-            setTextColor(resources.getColor(R.color.textPrimary, null))
-            paintFlags = paintFlags or android.graphics.Paint.ANTI_ALIAS_FLAG
-        }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-
-        val settingsBtn = TextView(this).apply {
-            text = "⚙"
-            textSize = 22f
-            setTextColor(resources.getColor(R.color.textSecondary, null))
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+        val logo = TextView(this).apply {
+            text = "N"
+            textSize = 18f
+            gravity = Gravity.CENTER
+            setTextColor(color(R.color.textPrimary))
+            paint.isFakeBoldText = true
+            background = Ui.tile(this@ChatsActivity, color(R.color.accent))
         }
-        settingsBtn.setOnClickListener {
-            startActivity(Intent(this@ChatsActivity, SettingsActivity::class.java))
+        header.addView(logo, LinearLayout.LayoutParams(dp(36), dp(36)))
+        header.addView(
+            Ui.text(this, "Nexus", 22f, R.color.textPrimary, true),
+            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(12) }
+        )
+        val dots = ImageView(this).apply {
+            setImageResource(R.drawable.ic_dots)
+            imageTintList = ColorStateList.valueOf(color(R.color.textSecondary))
+            setPadding(dp(10), dp(10), dp(10), dp(10))
         }
-        header.addView(settingsBtn)
+        dots.setOnClickListener { showMenu() }
+        header.addView(dots, LinearLayout.LayoutParams(dp(44), dp(44)))
         root.addView(header, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // ─── Поиск ───
-        val searchInput = EditText(this).apply {
-            hint = "🔍 Поиск"
-            setTextColor(resources.getColor(R.color.textPrimary, null))
-            setHintTextColor(resources.getColor(R.color.textMuted, null))
-            setBackgroundResource(R.drawable.bg_search)
-            setPadding(dp(16), dp(12), dp(16), dp(12))
+        // ── Поиск-пилюля ──
+        val search = EditText(this).apply {
+            hint = "Поиск чатов"
+            setHintTextColor(color(R.color.textMuted))
+            setTextColor(color(R.color.textPrimary))
+            background = Ui.pill(this@ChatsActivity, R.color.bgInput)
+            val d = resources.getDrawable(R.drawable.ic_search, null)
+            d.setTint(color(R.color.textMuted))
+            setCompoundDrawablesWithIntrinsicBounds(d, null, null, null)
+            compoundDrawablePadding = dp(12)
+            setPadding(dp(18), dp(12), dp(18), dp(12))
             textSize = 15f
             maxLines = 1
         }
-        root.addView(searchInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-            setMargins(dp(16), dp(4), dp(16), dp(8))
+        root.addView(search, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+            leftMargin = dp(12); rightMargin = dp(12); bottomMargin = dp(6)
         })
 
-        // ─── Адаптер ───
+        // ── Адаптер чатов ──
         chatAdapter = object : ArrayAdapter<Chat>(this@ChatsActivity, 0, chats) {
             override fun getView(pos: Int, cv: View?, parent: ViewGroup): View {
                 val chat = getItem(pos)!!
-
-                val view = LinearLayout(context).apply {
+                val row = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(16), dp(12), dp(16), dp(12))
-                    setBackgroundResource(R.drawable.bg_chat_item)
+                    setPadding(dp(14), dp(10), dp(16), dp(10))
                 }
 
-                // Аватарка (круглая)
                 val avatar = TextView(context).apply {
                     text = (chat.title ?: "Ч").take(1).uppercase()
                     textSize = 20f
                     gravity = Gravity.CENTER
-                    setTextColor(resources.getColor(R.color.textPrimary, null))
-                    setBackgroundResource(R.drawable.bg_avatar)
+                    setTextColor(0xFFFFFFFF.toInt())
+                    paint.isFakeBoldText = true
+                    background = Ui.tileCircle(context, avatarColors[Math.abs(chat.id.hashCode()) % avatarColors.size])
                 }
-                view.addView(avatar, LinearLayout.LayoutParams(dp(54), dp(54)))
+                row.addView(avatar, LinearLayout.LayoutParams(dp(54), dp(54)))
 
-                // Контент
-                val content = LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                }
+                val mid = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
 
-                // Строка 1: название + время
-                val row1 = LinearLayout(context).apply {
+                val line1 = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                 }
-                row1.addView(TextView(context).apply {
-                    text = (if (chat.pinned) "📌 " else "") + (chat.title ?: "Чат")
-                    textSize = 16f
-                    setTextColor(resources.getColor(R.color.textPrimary, null))
-                    maxLines = 1
-                }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-                row1.addView(TextView(context).apply {
-                    text = formatTime(chat.lastMessageAt)
-                    textSize = 12f
-                    setTextColor(resources.getColor(R.color.textMuted, null))
-                })
-                content.addView(row1)
+                line1.addView(
+                    Ui.text(context, chat.title ?: "Чат", 16f, R.color.textPrimary, true),
+                    LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+                )
+                line1.addView(Ui.text(context, formatTime(chat.lastMessageAt), 12f,
+                    if (chat.unreadCount > 0) R.color.accentText else R.color.textMuted))
+                mid.addView(line1)
 
-                // Строка 2: превью + бейдж
-                val row2 = LinearLayout(context).apply {
+                val line2 = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                 }
-                row2.addView(TextView(context).apply {
-                    text = chat.lastMessage ?: "Нет сообщений"
-                    textSize = 14f
-                    setTextColor(resources.getColor(R.color.textSecondary, null))
-                    maxLines = 1
-                }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+                line2.addView(
+                    Ui.text(context, chat.lastMessage ?: "Нет сообщений", 14f, R.color.textSecondary),
+                    LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+                )
                 if (chat.unreadCount > 0) {
-                    row2.addView(TextView(context).apply {
+                    line2.addView(TextView(context).apply {
                         text = "${chat.unreadCount}"
                         textSize = 12f
                         gravity = Gravity.CENTER
-                        setTextColor(resources.getColor(R.color.textPrimary, null))
-                        setBackgroundResource(R.drawable.bg_badge)
+                        setTextColor(0xFFFFFFFF.toInt())
+                        paint.isFakeBoldText = true
+                        background = Ui.pill(context, R.color.badge)
                         minWidth = dp(22)
                         setPadding(dp(7), dp(2), dp(7), dp(2))
-                    })
+                    }, LinearLayout.LayoutParams(WRAP_CONTENT, dp(20)).apply { leftMargin = dp(8) })
                 }
-                content.addView(row2, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                    topMargin = dp(3)
-                })
+                mid.addView(line2, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(3) })
 
-                view.addView(content, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply {
-                    leftMargin = dp(14)
-                })
-
-                return view
+                row.addView(mid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(14) })
+                return row
             }
         }
 
         listView = ListView(this).apply {
             adapter = chatAdapter
-            setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
+            setBackgroundColor(color(R.color.bgPrimary))
             divider = null
             dividerHeight = 0
             clipToPadding = false
-            setPadding(0, 0, 0, dp(80))
+            setPadding(0, dp(4), 0, dp(110))
         }
         root.addView(listView, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
 
-        // ─── Empty ───
         emptyText = TextView(this).apply {
-            text = "Нет чатов\nСоздайте первый чат"
+            text = "Нет чатов"
             gravity = Gravity.CENTER
-            textSize = 16f
-            setTextColor(resources.getColor(R.color.textMuted, null))
+            textSize = 15f
+            setTextColor(color(R.color.textMuted))
             visibility = View.GONE
         }
         root.addView(emptyText, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
 
-        // ─── FAB ───
-        val frame = FrameLayout(this)
         frame.addView(root, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
 
-        val fab = TextView(this).apply {
-            text = "✏"
-            textSize = 24f
-            gravity = Gravity.CENTER
-            setTextColor(resources.getColor(R.color.textPrimary, null))
-            setBackgroundResource(R.drawable.bg_fab)
+        // ── FAB: новый чат ──
+        val fab = ImageView(this).apply {
+            setImageResource(R.drawable.ic_pencil)
+            imageTintList = ColorStateList.valueOf(0xFFFFFFFF.toInt())
+            background = Ui.pill(this@ChatsActivity, R.color.accent)
             elevation = dp(6).toFloat()
+            setPadding(dp(16), dp(16), dp(16), dp(16))
         }
         fab.setOnClickListener { createChat() }
         frame.addView(fab, FrameLayout.LayoutParams(dp(56), dp(56)).apply {
             gravity = Gravity.BOTTOM or Gravity.END
-            setMargins(0, 0, dp(20), dp(20))
+            rightMargin = dp(16); bottomMargin = dp(88)
         })
 
+        BottomNav.attach(frame, this, "chats")
         setContentView(frame)
 
-        // ─── Клики ───
         listView.setOnItemClickListener { _, _, pos, _ ->
             val chat = chatAdapter.getItem(pos) ?: return@setOnItemClickListener
             startActivity(Intent(this, ChatActivity::class.java)
@@ -202,7 +202,7 @@ class ChatsActivity : Activity() {
             val chat = chatAdapter.getItem(pos) ?: return@setOnItemLongClickListener true
             AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
                 .setTitle(chat.title ?: "Чат")
-                .setItems(arrayOf(if (chat.pinned) "📌 Открепить" else "📌 Закрепить")) { _, i ->
+                .setItems(arrayOf(if (chat.pinned) "Открепить" else "Закрепить")) { _, i ->
                     val path = if (i == 0 && chat.pinned) "/chats/${chat.id}/unpin" else "/chats/${chat.id}/pin"
                     Api.post(path, JSONObject()) { _, _ -> loadChats() }
                 }
@@ -210,18 +210,46 @@ class ChatsActivity : Activity() {
             true
         }
 
-        searchInput.addTextChangedListener(object : android.text.TextWatcher {
+        search.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                chatAdapter.filter.filter(s)
-            }
+            override fun afterTextChanged(s: android.text.Editable?) { chatAdapter.filter.filter(s) }
         })
     }
 
     override fun onResume() {
         super.onResume()
         loadChats()
+    }
+
+    private fun color(res: Int): Int = resources.getColor(res, null)
+
+    private fun showMenu() {
+        AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+            .setItems(arrayOf("Обновить", "Адрес сервера")) { _, i ->
+                when (i) {
+                    0 -> loadChats()
+                    1 -> showServerDialog()
+                }
+            }
+            .show()
+    }
+
+    private fun showServerDialog() {
+        val input = EditText(this).apply {
+            setText(com.nexus.messenger.data.Store.apiBase)
+            setTextColor(color(R.color.textPrimary))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+        }
+        AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+            .setTitle("Адрес сервера")
+            .setView(input)
+            .setPositiveButton("Сохранить") { _, _ ->
+                com.nexus.messenger.data.Store.apiBase = input.text.toString().trim()
+                Toast.makeText(this, "Сохранено", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun loadChats() {
@@ -245,8 +273,8 @@ class ChatsActivity : Activity() {
     private fun createChat() {
         val input = EditText(this).apply {
             hint = "Название чата"
-            setTextColor(resources.getColor(R.color.textPrimary, null))
-            setHintTextColor(resources.getColor(R.color.textMuted, null))
+            setTextColor(color(R.color.textPrimary))
+            setHintTextColor(color(R.color.textMuted))
             setPadding(dp(16), dp(14), dp(16), dp(14))
         }
         AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
@@ -257,8 +285,7 @@ class ChatsActivity : Activity() {
                 Api.post("/chats", JSONObject().put("title", title).put("userIds", org.json.JSONArray())) { code, body ->
                     runOnUiThread {
                         if (code == 200 || code == 201) loadChats()
-                        else AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-                            .setMessage(body).setPositiveButton("OK", null).show()
+                        else Toast.makeText(this, "Не удалось создать чат", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
