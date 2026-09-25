@@ -16,12 +16,10 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import com.nexus.messenger.data.Api
 import com.nexus.messenger.data.Store
 import com.nexus.messenger.ui.BottomNav
 import com.nexus.messenger.ui.Ui
 import com.nexus.messenger.ui.dp
-import org.json.JSONObject
 
 class SettingsActivity : Activity() {
 
@@ -46,7 +44,7 @@ class SettingsActivity : Activity() {
             setPadding(dp(8), dp(8), dp(8), dp(120))
         }
 
-        // ── Шапка профиля ──
+        // Шапка профиля
         val head = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -82,37 +80,39 @@ class SettingsActivity : Activity() {
         )
         content.addView(head, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // ── Карточка 1: основные разделы ──
+        // Заглушка для разделов без бэкенда
         val soon = { Toast.makeText(this, "Появится в следующем обновлении", Toast.LENGTH_SHORT).show() }
+
+        // Карточка 1: основные разделы
         addCard(content, listOf(
-            row(R.drawable.ic_person, BLUE, "Аккаунт", "Имя, пользователь, «О себе»") {
+            row(R.drawable.ic_person, BLUE, "Аккаунт", "Имя, пользователь, «О себе»", onClick = {
                 startActivity(Intent(this, ProfileActivity::class.java))
-            },
-            row(R.drawable.ic_chat, ORANGE, "Настройки чатов", "Обои, ночной режим, анимации", soon),
-            row(R.drawable.ic_key, GREEN, "Конфиденциальность", "Время захода, устройства, ключи", soon),
-            row(R.drawable.ic_bell, PINK, "Уведомления", "Звуки, звонки, счётчик сообщений", soon),
-            row(R.drawable.ic_data, INDIGO, "Данные и память", "Настройки загрузки медиафайлов", soon),
-            row(R.drawable.ic_folder, CYAN, "Папки с чатами", "Сортировка чатов по папкам", soon),
-            row(R.drawable.ic_device, CYAN, "Устройства", "Управление активными сеансами", soon),
-            row(R.drawable.ic_globe, PURPLE, "Язык", "Русский", soon)
+            }),
+            row(R.drawable.ic_chat, ORANGE, "Настройки чатов", "Обои, ночной режим, анимации", onClick = soon),
+            row(R.drawable.ic_key, GREEN, "Конфиденциальность", "Время захода, устройства, ключи", onClick = soon),
+            row(R.drawable.ic_bell, PINK, "Уведомления", "Звуки, звонки, счётчик сообщений", onClick = soon),
+            row(R.drawable.ic_data, INDIGO, "Данные и память", "Настройки загрузки медиафайлов", onClick = soon),
+            row(R.drawable.ic_folder, CYAN, "Папки с чатами", "Сортировка чатов по папкам", onClick = soon),
+            row(R.drawable.ic_device, CYAN, "Устройства", "Управление активными сеансами", onClick = soon),
+            row(R.drawable.ic_globe, PURPLE, "Язык", "Русский", onClick = soon)
         ))
 
-        // ── Карточка 2: фирменное Nexus ──
+        // Карточка 2: фирменное Nexus
         addCard(content, listOf(
-            row(R.drawable.ic_bot, ORANGE, "Боты", "Создание и управление ботами") {
+            row(R.drawable.ic_bot, ORANGE, "Боты", "Создание и управление ботами", onClick = {
                 startActivity(Intent(this, BotsActivity::class.java))
-            },
-            row(R.drawable.ic_star, PURPLE, "Мотесы", "Галерея мотесов", soon),
-            row(R.drawable.ic_palette, PINK, "Темы оформления", "Цветовые темы интерфейса", soon),
-            row(R.drawable.ic_grid, INDIGO, "Иконка приложения", "Смена иконки в лаунчере") {
+            }),
+            row(R.drawable.ic_star, PURPLE, "Мотесы", "Галерея мотесов", onClick = soon),
+            row(R.drawable.ic_palette, PINK, "Темы оформления", "Цветовые темы интерфейса", onClick = soon),
+            row(R.drawable.ic_grid, INDIGO, "Иконка приложения", "Смена иконки в лаунчере", onClick = {
                 startActivity(Intent(this, IconPickerActivity::class.java))
-            },
-            row(R.drawable.ic_device, RED, "Сервер", Store.apiBase) { showServerDialog() }
+            }),
+            row(R.drawable.ic_device, RED, "Сервер", Store.apiBase, onClick = { showServerDialog() })
         ))
 
-        // ── Карточка 3: выход ──
+        // Карточка 3: выход
         addCard(content, listOf(
-            row(R.drawable.ic_close, RED, "Выйти", null, {
+            row(R.drawable.ic_close, RED, "Выйти", null, onClick = {
                 AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
                     .setMessage("Выйти из аккаунта?")
                     .setPositiveButton("Выйти") { _, _ ->
@@ -128,7 +128,8 @@ class SettingsActivity : Activity() {
         content.addView(
             Ui.text(this, "Nexus Messenger v1.0.0", 12f, R.color.textMuted),
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                topMargin = dp(20); gravity = Gravity.CENTER_HORIZONTAL
+                topMargin = dp(20)
+                gravity = Gravity.CENTER_HORIZONTAL
             }
         )
 
@@ -148,19 +149,26 @@ class SettingsActivity : Activity() {
         onClick: () -> Unit,
         titleColorRes: Int = R.color.textPrimary
     ): View {
-        val v = LinearLayout(this).apply {
+        val ctx = this
+        val v = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(10), dp(16), dp(10))
         }
-        v.addView(Ui.tileIcon(this, iconRes, tileColor),
-            LinearLayout.LayoutParams(dp(40), dp(40)))
-        val mid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        mid.addView(Ui.text(this, title, 16f, titleColorRes),
-            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        v.addView(
+            Ui.tileIcon(ctx, iconRes, tileColor),
+            LinearLayout.LayoutParams(dp(40), dp(40))
+        )
+        val mid = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        mid.addView(
+            Ui.text(ctx, title, 16f, titleColorRes),
+            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+        )
         if (subtitle != null) {
-            mid.addView(Ui.text(this, subtitle, 13f, R.color.textSecondary),
-                LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { topMargin = dp(2) })
+            mid.addView(
+                Ui.text(ctx, subtitle, 13f, R.color.textSecondary),
+                LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { topMargin = dp(2) }
+            )
         }
         v.addView(mid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(16) })
         v.setOnClickListener { onClick() }
@@ -168,18 +176,18 @@ class SettingsActivity : Activity() {
     }
 
     private fun addCard(parent: LinearLayout, rows: List<View>) {
-        val card = LinearLayout(this).apply {
+        val ctx = this@SettingsActivity
+        val card = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            background = Ui.card(this)
+            background = Ui.card(ctx)
         }
         rows.forEachIndexed { i, r ->
             card.addView(r, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
             if (i < rows.size - 1) {
-                card.addView(View(this).apply {
-                    setBackgroundColor(color(R.color.divider))
-                }, LinearLayout.LayoutParams(MATCH_PARENT, 1).apply {
-                    leftMargin = dp(72)
-                })
+                card.addView(
+                    View(ctx).apply { setBackgroundColor(color(R.color.divider)) },
+                    LinearLayout.LayoutParams(MATCH_PARENT, 1).apply { leftMargin = dp(72) }
+                )
             }
         }
         parent.addView(card, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
