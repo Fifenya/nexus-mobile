@@ -2,7 +2,6 @@ package com.nexus.messenger.data
 
 import org.json.JSONObject
 
-/** Безопасное чтение строки: отсутствует / null / "null" / "" → null */
 private fun str(j: JSONObject, key: String): String? {
     if (!j.has(key) || j.isNull(key)) return null
     val v = j.optString(key, "")
@@ -16,7 +15,9 @@ data class User(
     val email: String? = null,
     val avatar: String? = null,
     val online: Boolean = false,
-    val bio: String? = null
+    val bio: String? = null,
+    val onlineStatus: String? = null,
+    val lastSeenAt: String? = null
 ) {
     companion object {
         fun fromJson(j: JSONObject) = User(
@@ -26,7 +27,9 @@ data class User(
             str(j, "email"),
             str(j, "avatar") ?: str(j, "avatarUrl"),
             j.optBoolean("online"),
-            str(j, "bio")
+            str(j, "bio"),
+            str(j, "onlineStatus"),
+            str(j, "lastSeenAt")
         )
     }
 }
@@ -65,12 +68,23 @@ data class Message(
     val authorName: String,
     val replyToId: String? = null,
     val replyText: String? = null,
-    val replyAuthor: String? = null
+    val replyAuthor: String? = null,
+    val viewIds: List<String> = emptyList()
 ) {
     companion object {
         fun fromJson(j: JSONObject): Message {
             val author = j.optJSONObject("author") ?: JSONObject()
             val reply = j.optJSONObject("replyTo")
+            val viewsArr = j.optJSONArray("views")
+            val views = mutableListOf<String>()
+            if (viewsArr != null) {
+                for (i in 0 until viewsArr.length()) {
+                    val v = viewsArr.optJSONObject(i) ?: continue
+                    val uid = v.optJSONObject("user")?.optString("id")
+                        ?: v.optString("userId")
+                    if (uid.isNotEmpty() && uid != "null") views.add(uid)
+                }
+            }
             return Message(
                 str(j, "id") ?: "",
                 str(j, "text") ?: "",
@@ -80,7 +94,8 @@ data class Message(
                 str(author, "username") ?: "",
                 reply?.let { str(it, "id") },
                 reply?.let { str(it, "text") },
-                reply?.let { str(it, "author") }
+                reply?.let { str(it, "author") },
+                views
             )
         }
     }

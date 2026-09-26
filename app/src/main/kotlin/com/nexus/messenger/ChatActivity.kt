@@ -1,10 +1,11 @@
 package com.nexus.messenger
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -16,12 +17,15 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
-import android.widget.Toast
 import com.nexus.messenger.data.Api
+import com.nexus.messenger.data.Cache
 import com.nexus.messenger.data.Message
 import com.nexus.messenger.data.Store
+import com.nexus.messenger.data.User
+import com.nexus.messenger.ui.NxDialog
 import com.nexus.messenger.ui.Ui
 import com.nexus.messenger.ui.dp
+import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -34,11 +38,21 @@ class ChatActivity : Activity() {
     private lateinit var replyBar: LinearLayout
     private lateinit var replyLabel: TextView
     private lateinit var replyPreview: TextView
+    private lateinit var statusTv: TextView
     private val messages = mutableListOf<Message>()
     private lateinit var msgAdapter: ArrayAdapter<Message>
     private var replyTo: Message? = null
     private var editing: Message? = null
     private var isGroup = false
+    private var otherUserId: String? = null
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val presenceTask = object : Runnable {
+        override fun run() {
+            refreshPresence()
+            handler.postDelayed(this, 20000)
+        }
+    }
 
     private val avatarColors = intArrayOf(
         0xFFE17076.toInt(), 0xFF7BC862.toInt(), 0xFF65AADD.toInt(),
@@ -81,15 +95,25 @@ class ChatActivity : Activity() {
         val info = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         info.addView(Ui.text(this, title, 17f, R.color.textPrimary, true),
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-        info.addView(Ui.text(this, "в сети", 12f, R.color.online),
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        statusTv = Ui.text(this, "не в сети", 12f, R.color.textMuted)
+        info.addView(statusTv, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         header.addView(info, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(10) })
         val dots = ImageView(this).apply {
             setImageResource(R.drawable.ic_dots)
             imageTintList = ColorStateList.valueOf(color(R.color.textSecondary))
             setPadding(dp(10), dp(10), dp(10), dp(10))
         }
-        dots.setOnClickListener { Toast.makeText(this@ChatActivity, "Меню чата появится позже", Toast.LENGTH_SHORT).show() }
+        dots.setOnClickListener {
+            NxDialog(this).title(title).items(listOf("Обновить", "Очистить кэш чата")) { i ->
+                when (i) {
+                    0 -> loadMessages()
+                    1 -> {
+                        Cache.put(this, "msgs_$chatId", "[]")
+                        Ui.snackbar(this, "Кэш чата очищен")
+                    }
+                }
+            }.show()
+        }
         header.addView(dots, LinearLayout.LayoutParams(dp(44), dp(44)))
         root.addView(header, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
@@ -167,9 +191,8 @@ class ChatActivity : Activity() {
                     bubble.addView(Ui.text(context, msg.text, 15f, R.color.textPrimary),
                         LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
                 } else {
-                    val ph = Ui.text(context, "📎 Вложение", 14f, R.color.textSecondary)
-                    ph.paint.isFakeBoldText = false
-                    bubble.addView(ph, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+                    bubble.addView(Ui.text(context, "📎 Вложение", 14f, R.color.textSecondary),
+                        LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
                 }
 
                 val meta = LinearLayout(context).apply {
@@ -189,6 +212,14 @@ class ChatActivity : Activity() {
                     textSize = 10f
                     setTextColor(metaColor)
                 })
+                if (isOwn) {
+                    val myId = Store.user?.id
+                    val read = msg.viewIds.any { it != myId && it.isNotEmpty() }
+                    meta.addView(ImageView(context).apply {
+                        setImageResource(if (read) R.drawable.ic_dcheck else R.drawable.ic_check)
+                        imageTintList = ColorStateList.valueOf(metaColor)
+                    }, LinearLayout.LayoutParams(dp(14), dp(14)).apply { leftMargin = dp(4) })
+                }
                 bubble.addView(meta, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(2) })
 
                 wrap.addView(bubble, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
@@ -217,7 +248,7 @@ class ChatActivity : Activity() {
             imageTintList = ColorStateList.valueOf(color(R.color.textSecondary))
             setPadding(dp(8), dp(8), dp(8), dp(8))
         }
-        attach.setOnClickListener { Toast.makeText(this@ChatActivity, "Вложения появятся позже", Toast.LENGTH_SHORT).show() }
+        attach.setOnClickListener { Ui.snackbar(this, "Вложения появятся позже") }
         inputBar.addView(attach, LinearLayout.LayoutParams(dp(40), dp(40)))
         input = EditText(this).apply {
             hint = "Сообщение"
@@ -235,6 +266,7 @@ class ChatActivity : Activity() {
             imageTintList = ColorStateList.valueOf(0xFFFFFFFF.toInt())
             background = Ui.pill(this@ChatActivity, R.color.accent)
             setPadding(dp(11), dp(11), dp(11), dp(11))
+            isClickable = true
         }
         sendBtn.setOnClickListener { send() }
         inputBar.addView(sendBtn, LinearLayout.LayoutParams(dp(46), dp(46)))
@@ -247,38 +279,49 @@ class ChatActivity : Activity() {
             val isOwn = msg.authorId == Store.user?.id
             val actions = mutableListOf("Ответить")
             if (isOwn) { actions.add("Редактировать"); actions.add("Удалить") }
-            AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-                .setItems(actions.toTypedArray()) { _, i ->
-                    when (actions[i]) {
-                        "Ответить" -> {
-                            replyTo = msg; editing = null
-                            replyBar.visibility = View.VISIBLE
-                            replyLabel.text = "↩ ${msg.authorName}"
-                            replyPreview.text = msg.text
-                        }
-                        "Редактировать" -> {
-                            editing = msg; replyTo = null
-                            input.setText(msg.text)
-                            replyBar.visibility = View.VISIBLE
-                            replyLabel.text = "✎ Редактирование"
-                            replyPreview.text = msg.text
-                        }
-                        "Удалить" -> {
-                            AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-                                .setMessage("Удалить сообщение?")
-                                .setPositiveButton("Удалить") { _, _ ->
-                                    Api.delete("/messages/${msg.id}") { _, _ -> loadMessages() }
-                                }
-                                .setNegativeButton("Отмена", null)
-                                .show()
-                        }
+            NxDialog(this).items(actions) { i ->
+                when (actions[i]) {
+                    "Ответить" -> {
+                        replyTo = msg; editing = null
+                        replyBar.visibility = View.VISIBLE
+                        replyLabel.text = "↩ ${msg.authorName}"
+                        replyPreview.text = msg.text
+                    }
+                    "Редактировать" -> {
+                        editing = msg; replyTo = null
+                        input.setText(msg.text)
+                        replyBar.visibility = View.VISIBLE
+                        replyLabel.text = "✎ Редактирование"
+                        replyPreview.text = msg.text
+                    }
+                    "Удалить" -> {
+                        NxDialog(this)
+                            .message("Удалить сообщение?")
+                            .button("Удалить") {
+                                Api.delete("/messages/${msg.id}") { _, _ -> loadMessages() }
+                            }
+                            .button("Отмена") {}
+                            .show()
                     }
                 }
-                .show()
+            }.show()
             true
         }
 
+        // Сначала кэш (мгновенно), потом сеть
+        loadFromCache()
         loadMessages()
+        handler.post(presenceTask)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        markViewed()
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(presenceTask)
+        super.onDestroy()
     }
 
     private fun color(res: Int): Int = resources.getColor(res, null)
@@ -292,31 +335,103 @@ class ChatActivity : Activity() {
 
     private fun send() {
         val text = input.text.toString().trim()
-        if (text.isEmpty()) return
+        if (text.isEmpty()) {
+            Ui.snackbar(this, "Пустое сообщение")
+            return
+        }
+        sendBtn.isEnabled = false
         if (editing != null) {
-            Api.patch("/messages/${editing!!.id}", JSONObject().put("text", text)) { _, _ ->
-                runOnUiThread { clearAction(); loadMessages() }
+            Api.patch("/messages/${editing!!.id}", JSONObject().put("text", text)) { code, body ->
+                runOnUiThread {
+                    sendBtn.isEnabled = true
+                    if (code in 200..299) {
+                        clearAction(); loadMessages()
+                    } else {
+                        Ui.snackbar(this, Api.friendlyError(body))
+                    }
+                }
             }
         } else {
             val body = JSONObject().put("text", text)
             replyTo?.let { body.put("replyToId", it.id) }
-            Api.post("/chats/$chatId/messages", body) { _, _ ->
-                runOnUiThread { clearAction(); loadMessages() }
+            Api.post("/chats/$chatId/messages", body) { code, resp ->
+                runOnUiThread {
+                    sendBtn.isEnabled = true
+                    if (code in 200..299) {
+                        clearAction(); loadMessages()
+                    } else {
+                        Ui.snackbar(this, "Не отправлено: ${Api.friendlyError(resp)}")
+                    }
+                }
             }
         }
+    }
+
+    /** Сообщаем серверу, что мы прочитали чужие сообщения (галочки у собеседника) */
+    private fun markViewed() {
+        val myId = Store.user?.id
+        val ids = messages.filter { it.authorId != myId && it.authorId.isNotEmpty() }.map { it.id }
+        if (ids.isEmpty()) return
+        Api.post("/view", JSONObject().put("messageIds", JSONArray(ids))) { _, _ -> }
+    }
+
+    private fun loadFromCache() {
+        val raw = Cache.get(this, "msgs_$chatId") ?: return
+        renderMessages(parseMessages(raw))
     }
 
     private fun loadMessages() {
         Api.get("/chats/$chatId/messages") { code, body ->
             runOnUiThread {
-                messages.clear()
                 if (code == 200) {
-                    val arr = Api.parseArray(body)
-                    for (i in 0 until arr.length()) messages.add(Message.fromJson(arr.getJSONObject(i)))
-                    isGroup = messages.distinctBy { it.authorId }.size > 2
-                    msgAdapter.notifyDataSetChanged()
-                    if (messages.isNotEmpty()) listView.setSelection(messages.size - 1)
+                    Cache.put(this, "msgs_$chatId", body)
+                    renderMessages(parseMessages(body))
+                    markViewed()
+                } else if (code != 0) {
+                    Ui.snackbar(this, Api.friendlyError(body))
                 }
+            }
+        }
+    }
+
+    private fun renderMessages(list: List<Message>) {
+        messages.clear()
+        messages.addAll(list)
+        isGroup = messages.distinctBy { it.authorId }.size > 2
+        otherUserId = messages.firstOrNull { it.authorId != Store.user?.id && it.authorId.isNotEmpty() }?.authorId
+        msgAdapter.notifyDataSetChanged()
+        if (messages.isNotEmpty()) listView.setSelection(messages.size - 1)
+        refreshPresence()
+    }
+
+    /** Оба формата ответа: массив или {items: [...]} */
+    private fun parseMessages(body: String): List<Message> {
+        val trimmed = body.trim()
+        val arr = if (trimmed.startsWith("[")) {
+            Api.parseArray(body)
+        } else {
+            val o = Api.parseObj(body)
+            o?.optJSONArray("items") ?: o?.optJSONArray("messages") ?: JSONArray()
+        }
+        val out = mutableListOf<Message>()
+        for (i in 0 until arr.length()) out.add(Message.fromJson(arr.getJSONObject(i)))
+        return out
+    }
+
+    private fun refreshPresence() {
+        val oid = otherUserId ?: return
+        if (isGroup) {
+            statusTv.text = "группа"
+            statusTv.setTextColor(color(R.color.textMuted))
+            return
+        }
+        Api.get("/users/$oid") { code, body ->
+            runOnUiThread {
+                if (code != 200) return@runOnUiThread
+                val u = User.fromJson(Api.parseObj(body) ?: return@runOnUiThread)
+                val online = u.onlineStatus == "online" || u.online
+                statusTv.text = if (online) "в сети" else "не в сети"
+                statusTv.setTextColor(color(if (online) R.color.online else R.color.textMuted))
             }
         }
     }
