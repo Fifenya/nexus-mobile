@@ -73,7 +73,23 @@ data class Message(
 ) {
     companion object {
         fun fromJson(j: JSONObject): Message {
-            val author = j.optJSONObject("author") ?: JSONObject()
+            // Бэкенд возвращает "sender", но поддерживаем и "author" для совместимости
+            val senderObj = j.optJSONObject("sender")
+                ?: j.optJSONObject("author")
+                ?: JSONObject()
+
+            // Если sender это просто строка (id) — берём его
+            val senderId = if (senderObj.length() == 0) {
+                str(j, "senderId") ?: str(j, "authorId") ?: ""
+            } else {
+                str(senderObj, "id") ?: ""
+            }
+            val senderName = if (senderObj.length() == 0) {
+                str(j, "senderName") ?: str(j, "authorName") ?: ""
+            } else {
+                str(senderObj, "username") ?: str(senderObj, "displayName") ?: ""
+            }
+
             val reply = j.optJSONObject("replyTo")
             val viewsArr = j.optJSONArray("views")
             val views = mutableListOf<String>()
@@ -90,8 +106,8 @@ data class Message(
                 str(j, "text") ?: "",
                 str(j, "createdAt") ?: "",
                 str(j, "updatedAt"),
-                str(author, "id") ?: "",
-                str(author, "username") ?: "",
+                senderId,
+                senderName,
                 reply?.let { str(it, "id") },
                 reply?.let { str(it, "text") },
                 reply?.let { str(it, "author") },
