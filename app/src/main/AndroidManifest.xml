@@ -18,6 +18,7 @@
         <activity android:name=".ChatActivity" />
         <activity android:name=".SettingsActivity" />
         <activity android:name=".ProfileActivity" />
+        <activity android:name=".AccountActivity" />
         <activity android:name=".BotsActivity" />
         <activity android:name=".IconPickerActivity" />
 

@@ -1,7 +1,6 @@
 package com.nexus.messenger
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
@@ -15,9 +14,9 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import com.nexus.messenger.data.Store
 import com.nexus.messenger.ui.BottomNav
+import com.nexus.messenger.ui.NxDialog
 import com.nexus.messenger.ui.Ui
 import com.nexus.messenger.ui.dp
 
@@ -32,6 +31,8 @@ class SettingsActivity : Activity() {
     private val PURPLE = 0xFF9A6FE0.toInt()
     private val RED = 0xFFE05252.toInt()
 
+    private lateinit var serverSub: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -44,7 +45,6 @@ class SettingsActivity : Activity() {
             setPadding(dp(8), dp(8), dp(8), dp(120))
         }
 
-        // Шапка профиля
         val head = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -80,7 +80,9 @@ class SettingsActivity : Activity() {
         )
         content.addView(head, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        val soon = { Toast.makeText(this, "Появится в следующем обновлении", Toast.LENGTH_SHORT).show() }
+        val soon = { Ui.snackbar(this, "Появится в следующем обновлении") }
+
+        serverSub = Ui.text(this, Store.apiBase, 13f, R.color.textSecondary)
 
         addCard(content, listOf(
             row(R.drawable.ic_person, BLUE, "Аккаунт", "Имя, пользователь, «О себе»", onClick = {
@@ -107,19 +109,19 @@ class SettingsActivity : Activity() {
                 setImageResource(IconManager.getCurrent(this@SettingsActivity).drawable)
                 scaleType = ImageView.ScaleType.FIT_CENTER
             }),
-            row(R.drawable.ic_device, RED, "Сервер", Store.apiBase, onClick = { showServerDialog() })
+            row(R.drawable.ic_device, RED, "Сервер", null, onClick = { showServerDialog() }, subtitleView = serverSub)
         ))
 
         addCard(content, listOf(
             row(R.drawable.ic_close, RED, "Выйти", null, onClick = {
-                AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-                    .setMessage("Выйти из аккаунта?")
-                    .setPositiveButton("Выйти") { _, _ ->
+                NxDialog(this)
+                    .message("Выйти из аккаунта?")
+                    .button("Выйти") {
                         Store.logout()
                         startActivity(Intent(this, LoginActivity::class.java))
                         finishAffinity()
                     }
-                    .setNegativeButton("Отмена", null)
+                    .button("Отмена") {}
                     .show()
             }, titleColorRes = R.color.danger)
         ))
@@ -147,7 +149,8 @@ class SettingsActivity : Activity() {
         subtitle: String?,
         onClick: () -> Unit,
         titleColorRes: Int = R.color.textPrimary,
-        trailing: View? = null
+        trailing: View? = null,
+        subtitleView: TextView? = null
     ): View {
         val ctx = this
         val v = LinearLayout(ctx).apply {
@@ -157,16 +160,16 @@ class SettingsActivity : Activity() {
         }
         v.addView(Ui.tileIcon(ctx, iconRes, tileColor), LinearLayout.LayoutParams(dp(40), dp(40)))
         val mid = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        // ВАЖНО: mid вертикальный, поэтому ширина детей MATCH_PARENT, а не 0+weight
         mid.addView(
             Ui.text(ctx, title, 16f, titleColorRes),
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
         )
-        if (subtitle != null) {
-            mid.addView(
-                Ui.text(ctx, subtitle, 13f, R.color.textSecondary),
-                LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(2) }
-            )
+        val sub = subtitleView ?: subtitle?.let {
+            Ui.text(ctx, it, 13f, R.color.textSecondary)
+        }
+        if (sub != null) {
+            sub.maxLines = 1
+            mid.addView(sub, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(2) })
         }
         v.addView(mid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(16) })
         if (trailing != null) {
@@ -200,16 +203,23 @@ class SettingsActivity : Activity() {
         val input = EditText(this).apply {
             setText(Store.apiBase)
             setTextColor(color(R.color.textPrimary))
+            setHintTextColor(color(R.color.textMuted))
+            background = Ui.pill(this@SettingsActivity, R.color.bgInput)
             setPadding(dp(16), dp(14), dp(16), dp(14))
         }
-        AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-            .setTitle("Адрес сервера")
-            .setView(input)
-            .setPositiveButton("Сохранить") { _, _ ->
-                Store.apiBase = input.text.toString().trim()
-                Toast.makeText(this, "Сохранено", Toast.LENGTH_SHORT).show()
+        NxDialog(this)
+            .title("Адрес сервера")
+            .message("При старте приложение само читает актуальный туннель из nexus-redirect. Ручной адрес — резервный вариант.")
+            .view(input)
+            .button("Сохранить") {
+                val v = input.text.toString().trim()
+                if (v.isNotEmpty()) {
+                    Store.apiBase = v
+                    serverSub.text = Store.apiBase
+                    Ui.snackbar(this, "Сервер: ${Store.apiBase}")
+                }
             }
-            .setNegativeButton("Отмена", null)
+            .button("Отмена") {}
             .show()
     }
 }

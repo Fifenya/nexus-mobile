@@ -1,7 +1,7 @@
 package com.nexus.messenger
 
 import android.app.Activity
-import android.app.AlertDialog
+import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -11,7 +11,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import com.nexus.messenger.ui.Ui
 import com.nexus.messenger.ui.dp
 
@@ -24,7 +23,6 @@ class IconPickerActivity : Activity() {
             setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
         }
 
-        // Шапка
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -52,7 +50,6 @@ class IconPickerActivity : Activity() {
 
         val current = IconManager.getCurrent(this)
 
-        // Крупное превью текущей иконки
         val previewWrap = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -71,11 +68,10 @@ class IconPickerActivity : Activity() {
         content.addView(previewWrap, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         content.addView(
-            Ui.text(this, "Выберите стиль", 13f, R.color.accentText, true),
+            Ui.text(this, "Выберите стиль — смена происходит сразу", 13f, R.color.accentText, true),
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(20); bottomMargin = dp(8) }
         )
 
-        // Сетка 2 колонки
         val grid = GridLayout(this).apply { columnCount = 2 }
 
         IconManager.IconStyle.values().forEach { style ->
@@ -107,19 +103,15 @@ class IconPickerActivity : Activity() {
 
             cell.setOnClickListener {
                 if (isActive) {
-                    Toast.makeText(this@IconPickerActivity, "Уже выбрано", Toast.LENGTH_SHORT).show()
+                    Ui.snackbar(this, "Уже выбрано")
                     return@setOnClickListener
                 }
-                AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-                    .setTitle("Сменить иконку?")
-                    .setMessage("Иконка «${style.displayName}» появится в лаунчере через несколько секунд. Название приложения останется «Nexus».")
-                    .setPositiveButton("Сменить") { _, _ ->
-                        IconManager.setCurrent(this@IconPickerActivity, style)
-                        Toast.makeText(this@IconPickerActivity, "Иконка изменена ✓", Toast.LENGTH_LONG).show()
-                        finish()
-                    }
-                    .setNegativeButton("Отмена", null)
-                    .show()
+                // Без подтверждения: меняем сразу
+                IconManager.setCurrent(this@IconPickerActivity, style)
+                startActivity(Intent(this@IconPickerActivity, IconPickerActivity::class.java)
+                    .putExtra("changed", style.displayName))
+                finish()
+                overridePendingTransition(0, 0)
             }
 
             val params = GridLayout.LayoutParams().apply {
@@ -141,5 +133,9 @@ class IconPickerActivity : Activity() {
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         setContentView(root)
+
+        intent.getStringExtra("changed")?.let {
+            Ui.snackbar(this, "Иконка «$it» изменена ✓")
+        }
     }
 }

@@ -1,7 +1,6 @@
 package com.nexus.messenger
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
@@ -9,20 +8,17 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import com.nexus.messenger.data.Api
 import com.nexus.messenger.data.Store
 import com.nexus.messenger.data.User
 import com.nexus.messenger.ui.BottomNav
 import com.nexus.messenger.ui.Ui
 import com.nexus.messenger.ui.dp
-import org.json.JSONObject
 
 class ProfileActivity : Activity() {
     private lateinit var nameTv: TextView
@@ -41,7 +37,6 @@ class ProfileActivity : Activity() {
             setPadding(dp(8), dp(8), dp(8), dp(120))
         }
 
-        // Шапка
         val head = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -63,7 +58,7 @@ class ProfileActivity : Activity() {
             background = Ui.pill(this@ProfileActivity, R.color.accent)
             setPadding(dp(7), dp(7), dp(7), dp(7))
         }
-        camBadge.setOnClickListener { Toast.makeText(this@ProfileActivity, "Загрузка фото появится позже", Toast.LENGTH_SHORT).show() }
+        camBadge.setOnClickListener { Ui.snackbar(this, "Загрузка фото появится позже") }
         avatarWrap.addView(camBadge, FrameLayout.LayoutParams(dp(30), dp(30)).apply {
             gravity = Gravity.BOTTOM or Gravity.END
         })
@@ -74,23 +69,22 @@ class ProfileActivity : Activity() {
         head.addView(subTv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(2) })
         content.addView(head, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // Три кнопки-карточки
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(4), 0, dp(4), 0)
         }
         actions.addView(actionCard(R.drawable.ic_camera, "Выбрать фото") {
-            Toast.makeText(this, "Загрузка фото появится позже", Toast.LENGTH_SHORT).show()
+            Ui.snackbar(this, "Загрузка фото появится позже")
         }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
-        actions.addView(actionCard(R.drawable.ic_pencil, "Изменить") { showEditDialog() },
-            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
+        actions.addView(actionCard(R.drawable.ic_pencil, "Изменить") {
+            startActivity(Intent(this, AccountActivity::class.java))
+        }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
         actions.addView(actionCard(R.drawable.ic_gear, "Настройки") {
             startActivity(Intent(this, SettingsActivity::class.java))
             finish()
         }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
         content.addView(actions, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(4) })
 
-        // Карточка информации
         bioValue = Ui.text(this, "—", 16f, R.color.textPrimary)
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -100,8 +94,8 @@ class ProfileActivity : Activity() {
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         card.addView(View(this).apply { setBackgroundColor(color(R.color.divider)) },
             LinearLayout.LayoutParams(MATCH_PARENT, 1).apply { leftMargin = dp(16) })
-        val bioRow = infoRowView("О себе", bioValue)
-        card.addView(bioRow, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        card.addView(infoRowView("О себе", bioValue),
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         content.addView(card, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12) })
 
         scroll.addView(content)
@@ -109,6 +103,11 @@ class ProfileActivity : Activity() {
         BottomNav.attach(frame, this, "profile")
         setContentView(frame)
 
+        load()
+    }
+
+    override fun onResume() {
+        super.onResume()
         load()
     }
 
@@ -156,49 +155,5 @@ class ProfileActivity : Activity() {
                 }
             }
         }
-    }
-
-    private fun showEditDialog() {
-        val nameInput = EditText(this).apply {
-            hint = "Отображаемое имя"
-            setTextColor(color(R.color.textPrimary))
-            setHintTextColor(color(R.color.textMuted))
-            setPadding(dp(16), dp(14), dp(16), dp(14))
-            setText(Store.user?.displayName ?: "")
-        }
-        val bioInput = EditText(this).apply {
-            hint = "О себе"
-            setTextColor(color(R.color.textPrimary))
-            setHintTextColor(color(R.color.textMuted))
-            setPadding(dp(16), dp(14), dp(16), dp(14))
-            setText(Store.user?.bio ?: "")
-        }
-        val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(8), dp(4), dp(8), 0)
-        }
-        box.addView(nameInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-        box.addView(bioInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) })
-
-        AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-            .setTitle("Редактировать профиль")
-            .setView(box)
-            .setPositiveButton("Сохранить") { _, _ ->
-                Api.patch("/users/me", JSONObject()
-                    .put("displayName", nameInput.text.toString().trim())
-                    .put("bio", bioInput.text.toString().trim())
-                ) { code, _ ->
-                    runOnUiThread {
-                        if (code == 200) {
-                            Toast.makeText(this, "Сохранено", Toast.LENGTH_SHORT).show()
-                            load()
-                        } else {
-                            Toast.makeText(this, "Не удалось сохранить", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
     }
 }
