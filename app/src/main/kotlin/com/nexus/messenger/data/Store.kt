@@ -28,17 +28,21 @@ object Store {
                 put("id", v.id)
                 put("username", v.username)
                 v.displayName?.let { put("displayName", it) }
+                v.bio?.let { put("bio", it) }
             }.toString())
         }.apply()
 
     var apiBase: String
-        get() = prefs.getString("api_base", "http://192.168.1.103:3000")!!
+        get() = prefs.getString("api_base", "http://192.168.1.103:5173")!!
         set(v) {
-            // Защита: ссылка-диспетчер GitHub Pages не может быть адресом API.
-            // Она нужна только чтобы прочитать url.txt, не как конечная точка.
             if (v.contains("github.io")) return
             prefs.edit().putString("api_base", v.trim()).apply()
         }
+
+    /** Тест-режим: локальная имитация сервера без сети */
+    var testMode: Boolean
+        get() = prefs.getBoolean("test_mode", false)
+        set(v) = prefs.edit().putBoolean("test_mode", v).apply()
 
     fun logout() {
         prefs.edit().clear().apply()

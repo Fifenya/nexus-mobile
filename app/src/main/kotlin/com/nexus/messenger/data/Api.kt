@@ -11,13 +11,8 @@ import java.util.concurrent.Executors
 object Api {
     private val exec = Executors.newCachedThreadPool()
 
-    // Стабильная ссылка-диспетчер (GitHub Pages)
     private const val URL_DISPATCHER = "https://fifenya.github.io/nexus-redirect/url.txt"
 
-    /**
-     * При старте получаем актуальный URL туннеля с GitHub Pages.
-     * ?nocache=... обходит кэш CDN GitHub Pages.
-     */
     fun resolveServer(onDone: () -> Unit) {
         exec.execute {
             try {
@@ -33,13 +28,11 @@ object Api {
                     }
                 }
             } catch (_: Exception) {
-                // fallback — используем сохранённый адрес
             }
             onDone()
         }
     }
 
-    /** Человекочитаемые ошибки вместо сырого HTML Cloudflare */
     fun friendlyError(body: String): String {
         return when {
             body.contains("error code: 1033") ->
@@ -60,6 +53,11 @@ object Api {
         method: String, path: String, body: JSONObject? = null,
         onResult: (Int, String) -> Unit
     ) {
+        // Тест-режим: всё обслуживается локально, без сети
+        if (Store.testMode) {
+            MockServer.handle(method, path, body, onResult)
+            return
+        }
         exec.execute {
             try {
                 val url = URL(Store.apiBase + path)
