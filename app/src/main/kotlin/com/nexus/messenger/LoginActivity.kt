@@ -35,7 +35,6 @@ class LoginActivity : Activity() {
             setPadding(dp(28), dp(90), dp(28), dp(28))
         }
 
-        // Логотип со свечением
         val logo = TextView(this).apply {
             text = "N"
             textSize = 46f
@@ -52,7 +51,6 @@ class LoginActivity : Activity() {
         root.addView(Ui.text(this, "Защищённый мессенджер · v1.0.0", 13f, R.color.textMuted),
             LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(4) })
 
-        // Карточка с полями
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Ui.card(this@LoginActivity)
@@ -86,7 +84,6 @@ class LoginActivity : Activity() {
             topMargin = dp(36)
         })
 
-        // Кнопка входа
         val btn = TextView(this).apply {
             text = "Войти"
             textSize = 16f
@@ -98,7 +95,6 @@ class LoginActivity : Activity() {
         }
         root.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(52)).apply { topMargin = dp(18) })
 
-        // Регистрация
         val reg = TextView(this).apply {
             text = "Нет аккаунта? Создать"
             textSize = 14f
@@ -109,7 +105,6 @@ class LoginActivity : Activity() {
         reg.setOnClickListener { startActivity(Intent(this@LoginActivity, RegisterActivity::class.java)) }
         root.addView(reg, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
 
-        // Сервер
         val serverLink = TextView(this).apply {
             text = "🌐 " + Store.apiBase
             textSize = 11f
@@ -126,7 +121,7 @@ class LoginActivity : Activity() {
         root.addView(Ui.text(this, "dev-доступ: testdevapp / testdevapp — тест-режим без сервера", 11f, R.color.textMuted),
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(14) })
 
-        scroll.addView(root, ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        scroll.addView(root, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         frame.addView(scroll, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         setContentView(frame)
 
@@ -138,7 +133,6 @@ class LoginActivity : Activity() {
                 return@setOnClickListener
             }
 
-            // Тест-режим: локальная имитация сервера
             if (u == "testdevapp" && p == "testdevapp") {
                 Store.testMode = true
                 Store.token = "mock-token"

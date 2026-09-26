@@ -92,7 +92,7 @@ class RegisterActivity : Activity() {
         link.setOnClickListener { finish() }
         root.addView(link, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
 
-        scroll.addView(root, ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        scroll.addView(root, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         frame.addView(scroll, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         setContentView(frame)
 
