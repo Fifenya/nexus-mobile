@@ -1,134 +1,143 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"
         android:icon="@drawable/classic"
         android:label="Nexus"
-        android:theme="@style/NexusTheme"
-        android:usesCleartextTraffic="true">
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:usesCleartextTraffic="true"
+        tools:targetApi="34">
 
-        <activity android:name=".MainActivity" android:exported="true" />
-        <activity android:name=".LoginActivity" />
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivityClassic"
+            android:enabled="true"
+            android:exported="true"
+            android:taskAffinity=".classic">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivityNeon"
+            android:enabled="false"
+            android:exported="true"
+            android:taskAffinity=".neon">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivityCrimson"
+            android:enabled="false"
+            android:exported="true"
+            android:taskAffinity=".crimson">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivityLight"
+            android:enabled="false"
+            android:exported="true"
+            android:taskAffinity=".light">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivityEmboss"
+            android:enabled="false"
+            android:exported="true"
+            android:taskAffinity=".emboss">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivityLine"
+            android:enabled="false"
+            android:exported="true"
+            android:taskAffinity=".line">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivityBubble"
+            android:enabled="false"
+            android:exported="true"
+            android:taskAffinity=".bubble">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <activity android:name=".RegisterActivity" />
         <activity android:name=".ForgotActivity" />
         <activity android:name=".ChatsActivity" />
-        <activity android:name=".ContactsActivity" />
-        <activity android:name=".CreateGroupActivity" />
-        <activity android:name=".GroupInfoActivity" />
-        <activity android:name=".GroupSettingsActivity" />
-        <activity android:name=".InviteActivity" />
         <activity android:name=".ChatActivity" />
-        <activity android:name=".MotesActivity" />
-        <activity android:name=".MotesPickerActivity" />
+        <activity android:name=".ContactsActivity" />
         <activity android:name=".SettingsActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".AccountActivity" />
-        <activity android:name=".ShareProfileActivity" />
-        <activity android:name=".BotsActivity" />
-        <activity android:name=".IconPickerActivity" />
-        <activity android:name=".ChatSettingsActivity" />
+        <activity android:name=".PrivacySettingsActivity" />
         <activity android:name=".NotificationsActivity" />
         <activity android:name=".DataStorageActivity" />
-        <activity android:name=".DevicesActivity" />
-        <activity android:name=".LanguageActivity" />
-        <activity android:name=".PrivacySettingsActivity" />
         <activity android:name=".FoldersActivity" />
-        <activity android:name=".ThemesActivity" />
+        <activity android:name=".DevicesActivity" />
         <activity android:name=".PowerSaveActivity" />
+        <activity android:name=".LanguageActivity" />
+        <activity android:name=".BotsActivity" />
+        <activity android:name=".MotesActivity" />
+        <activity android:name=".MotesPickerActivity" />
+        <activity android:name=".ThemesActivity" />
+        <activity android:name=".IconPickerActivity" />
+        <activity android:name=".GroupInfoActivity" />
+        <activity android:name=".GroupSettingsActivity" />
+        <activity android:name=".InviteActivity" />
+        <activity android:name=".CreateGroupActivity" />
+        <activity android:name=".ShareProfileActivity" />
+        <activity android:name=".ChatSettingsActivity" />
 
-        <activity-alias
-            android:name=".MainActivityClassic"
-            android:targetActivity=".MainActivity"
-            android:label="@string/app_name"
-            android:icon="@drawable/classic"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
+        <activity
+            android:name=".VideoFullscreenActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="unspecified"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
 
-        <activity-alias
-            android:name=".MainActivityNeon"
-            android:targetActivity=".MainActivity"
-            android:label="@string/app_name"
-            android:icon="@drawable/neon"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name=".MainActivityCrimson"
-            android:targetActivity=".MainActivity"
-            android:label="@string/app_name"
-            android:icon="@drawable/crimson"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name=".MainActivityLight"
-            android:targetActivity=".MainActivity"
-            android:label="@string/app_name"
-            android:icon="@drawable/light"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name=".MainActivityEmboss"
-            android:targetActivity=".MainActivity"
-            android:label="@string/app_name"
-            android:icon="@drawable/emboss"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name=".MainActivityLine"
-            android:targetActivity=".MainActivity"
-            android:label="@string/app_name"
-            android:icon="@drawable/line"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name=".MainActivityBubble"
-            android:targetActivity=".MainActivity"
-            android:label="@string/app_name"
-            android:icon="@drawable/bubble"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
     </application>
+
 </manifest>

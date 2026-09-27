@@ -89,7 +89,7 @@ class ChatActivity : Activity() {
             if (t.chatId == chatId && t.userId == otherUserId && t.userId.isNotEmpty()) {
                 if (t.isTyping) {
                     typingUntil = System.currentTimeMillis() + 3000
-                    statusTv.text = "печатает…"
+                    statusTv.text = "печатает..."
                     statusTv.setTextColor(color(R.color.accentText))
                     handler.removeCallbacks(typingRevertTask)
                     handler.postDelayed(typingRevertTask, 3100)
@@ -282,11 +282,12 @@ class ChatActivity : Activity() {
                             bubble.addView(img, LinearLayout.LayoutParams(dp(200), dp(200)).apply { bottomMargin = dp(4) })
                         }
                         "video" -> {
-                            bubble.addView(videoBlock(context, att),
-                                LinearLayout.LayoutParams(dp(220), dp(280)).apply { bottomMargin = dp(4) })
+                            val videoView = videoBlock(context, att)
+                            bubble.addView(videoView,
+                                LinearLayout.LayoutParams(MATCH_PARENT, dp(280)).apply { bottomMargin = dp(4) })
                         }
                         else -> {
-                            bubble.addView(Ui.text(context, "📎 ${att.type}", 14f, R.color.textSecondary),
+                            bubble.addView(Ui.text(context, " ${att.type}", 14f, R.color.textSecondary),
                                 LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
                         }
                     }
@@ -439,14 +440,14 @@ class ChatActivity : Activity() {
                     "Ответить" -> {
                         replyTo = msg; editing = null
                         replyBar.visibility = View.VISIBLE
-                        replyLabel.text = "↩ ${msg.authorName}"
+                        replyLabel.text = " ${msg.authorName}"
                         replyPreview.text = msg.text
                     }
                     "Редактировать" -> {
                         editing = msg; replyTo = null
                         input.setText(msg.text)
                         replyBar.visibility = View.VISIBLE
-                        replyLabel.text = "✎ Редактирование"
+                        replyLabel.text = " Редактирование"
                         replyPreview.text = msg.text
                     }
                     "Удалить" -> {
