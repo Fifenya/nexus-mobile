@@ -19,6 +19,7 @@ import android.widget.ListView
 import android.widget.TextView
 import com.nexus.messenger.data.Api
 import com.nexus.messenger.data.Cache
+import com.nexus.messenger.data.LocalPrefs
 import com.nexus.messenger.data.Message
 import com.nexus.messenger.data.Store
 import com.nexus.messenger.data.User
@@ -153,7 +154,7 @@ class ChatActivity : Activity() {
                     setPadding(dp(40), dp(3), dp(40), dp(3))
                     gravity = if (isOwn) Gravity.END else Gravity.START
                 }
-                val r = dp(16).toFloat()
+                val r = dp(LocalPrefs.chatRadius).toFloat()
                 val t = dp(4).toFloat()
                 val bubble = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
@@ -167,7 +168,7 @@ class ChatActivity : Activity() {
                     setPadding(dp(12), dp(8), dp(12), dp(6))
                 }
 
-                if (!isOwn && isGroup) {
+                if (!isOwn && isGroup && LocalPrefs.chatShowNames) {
                     bubble.addView(Ui.text(context, msg.authorName, 12f, R.color.accentText, true),
                         LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { bottomMargin = dp(2) })
                 }
@@ -188,7 +189,7 @@ class ChatActivity : Activity() {
                 }
 
                 if (msg.text.isNotEmpty()) {
-                    bubble.addView(Ui.text(context, msg.text, 15f, R.color.textPrimary),
+                    bubble.addView(Ui.text(context, msg.text, LocalPrefs.chatTextSize.toFloat(), R.color.textPrimary),
                         LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
                 } else {
                     bubble.addView(Ui.text(context, "📎 Вложение", 14f, R.color.textSecondary),
@@ -229,7 +230,7 @@ class ChatActivity : Activity() {
 
         listView = ListView(this).apply {
             adapter = msgAdapter
-            setBackgroundColor(color(R.color.bgPrimary))
+            setBackgroundColor(LocalPrefs.chatBgColors[LocalPrefs.chatBgIndex])
             divider = null
             dividerHeight = 0
             transcriptMode = ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL
@@ -308,7 +309,6 @@ class ChatActivity : Activity() {
             true
         }
 
-        // Сначала кэш (мгновенно), потом сеть
         loadFromCache()
         loadMessages()
         handler.post(presenceTask)
@@ -367,7 +367,6 @@ class ChatActivity : Activity() {
         }
     }
 
-    /** Сообщаем серверу, что мы прочитали чужие сообщения (галочки у собеседника) */
     private fun markViewed() {
         val myId = Store.user?.id
         val ids = messages.filter { it.authorId != myId && it.authorId.isNotEmpty() }.map { it.id }
@@ -404,7 +403,6 @@ class ChatActivity : Activity() {
         refreshPresence()
     }
 
-    /** Оба формата ответа: массив или {items: [...]} */
     private fun parseMessages(body: String): List<Message> {
         val trimmed = body.trim()
         val arr = if (trimmed.startsWith("[")) {
@@ -439,7 +437,7 @@ class ChatActivity : Activity() {
     private fun formatTime(s: String): String {
         return try {
             val date = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(s) ?: return ""
-            SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
+            SimpleDateFormat("HH:mm", LocalPrefs.formatLocale()).format(date)
         } catch (e: Exception) { "" }
     }
 }
