@@ -305,7 +305,9 @@ object MockServer {
                         put("id", inv.id)
                         put("code", inv.code)
                         put("uses", inv.uses)
-                        put("creator", JSONObject().put("username", MY_NAME))
+                        val creator = JSONObject()
+                        creator.put("username", MY_NAME)
+                        put("creator", creator)
                     })
                 }
                 200 to arr.toString()

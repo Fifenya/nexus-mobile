@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -70,7 +71,6 @@ class AccountActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(32))
         }
 
-        // ── Ваше имя ──
         val nameCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Ui.card(this@AccountActivity)
@@ -87,7 +87,6 @@ class AccountActivity : Activity() {
         nameCard.addView(lastInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         content.addView(nameCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // ── О себе ──
         val bioCard = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -112,7 +111,6 @@ class AccountActivity : Activity() {
             }
         })
 
-        // ── Информация о Вас ──
         val infoCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Ui.card(this@AccountActivity)
@@ -132,7 +130,6 @@ class AccountActivity : Activity() {
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         content.addView(infoCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) })
 
-        // ── Аккаунты и выход ──
         val accCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Ui.card(this@AccountActivity)
@@ -156,7 +153,7 @@ class AccountActivity : Activity() {
         }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         content.addView(accCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) })
 
-        scroll.addView(content, ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        scroll.addView(content, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         setContentView(root)
 

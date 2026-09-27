@@ -3,8 +3,10 @@ package com.nexus.messenger
 import android.app.Activity
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -60,7 +62,7 @@ class DataStorageActivity : Activity() {
         })
         content.addView(autoCard, cardLp())
 
-        scroll.addView(content, ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        scroll.addView(content, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         setContentView(root)
     }
@@ -74,7 +76,7 @@ class DataStorageActivity : Activity() {
         background = Ui.card(this@DataStorageActivity)
     }
 
-    private fun dividerView() = android.view.View(this).apply { setBackgroundColor(color(R.color.divider)) }
+    private fun dividerView() = View(this).apply { setBackgroundColor(color(R.color.divider)) }
 
     private fun sectionLabel(s: String): TextView =
         Ui.text(this, s, 13f, R.color.accentText, true).apply { setPadding(dp(16), dp(14), dp(16), dp(6)) }

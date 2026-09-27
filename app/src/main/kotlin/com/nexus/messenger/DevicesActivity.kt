@@ -5,8 +5,10 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -73,14 +75,14 @@ class DevicesActivity : Activity() {
         val note = Ui.text(this, "Другие сеансы появятся здесь, когда на сервере будет включена мульти-девайс поддержка.", 12f, R.color.textMuted)
         content.addView(note, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12) })
 
-        scroll.addView(content, ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        scroll.addView(content, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         setContentView(root)
     }
 
     private fun color(res: Int): Int = resources.getColor(res, null)
 
-    private fun dividerView() = android.view.View(this).apply { setBackgroundColor(color(R.color.divider)) }
+    private fun dividerView() = View(this).apply { setBackgroundColor(color(R.color.divider)) }
 
     private fun sectionLabel(s: String): TextView =
         Ui.text(this, s, 13f, R.color.accentText, true).apply { setPadding(dp(16), dp(14), dp(16), dp(6)) }
