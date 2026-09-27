@@ -2,7 +2,6 @@ package com.nexus.messenger.ui
 
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
-import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -33,17 +32,7 @@ class VideoPlayer(context: Context) : FrameLayout(context) {
 
     private var isPlaying = false
     private var duration = 0
-
-    private val updateProgress = object : Runnable {
-        override fun run() {
-            if (isPlaying) {
-                val pos = videoView.currentPosition
-                progress.setProgress(pos, false)
-                currentTime.text = fmtTime(pos / 1000)
-                handler.postDelayed(this, 500)
-            }
-        }
-    }
+    private lateinit var updateProgress: Runnable
 
     init {
         setBackgroundColor(0xFF000000.toInt())
@@ -161,6 +150,18 @@ class VideoPlayer(context: Context) : FrameLayout(context) {
 
         setOnClickListener {
             controls.visibility = if (controls.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        }
+
+        // Инициализируем updateProgress ПОСЛЕ того, как videoView, progress и currentTime созданы
+        updateProgress = object : Runnable {
+            override fun run() {
+                if (isPlaying) {
+                    val pos = videoView.currentPosition
+                    progress.setProgress(pos, false)
+                    currentTime.text = fmtTime(pos / 1000)
+                    handler.postDelayed(this, 500)
+                }
+            }
         }
     }
 
