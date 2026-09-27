@@ -1,13 +1,13 @@
 package com.nexus.messenger.data
 
 import android.content.Context
+import com.nexus.messenger.NexusApp
 import java.util.Locale
 
 object LocalPrefs {
-    private lateinit var prefs: android.content.SharedPreferences
 
-    fun init(ctx: Context) {
-        prefs = ctx.getSharedPreferences("nexus_local", Context.MODE_PRIVATE)
+    private val prefs: android.content.SharedPreferences by lazy {
+        NexusApp.context().getSharedPreferences("nexus_local", Context.MODE_PRIVATE)
     }
 
     val chatBgColors = intArrayOf(
@@ -56,15 +56,15 @@ object LocalPrefs {
         set(v) = prefs.edit().putBoolean("force_ru", v).apply()
 
     var privacyOnline: String
-        get() = prefs.getString("privacy_online", "Все")!!
+        get() = prefs.getString("privacy_online", "Все") ?: "Все"
         set(v) = prefs.edit().putString("privacy_online", v).apply()
 
     var privacyPhoto: String
-        get() = prefs.getString("privacy_photo", "Все")!!
+        get() = prefs.getString("privacy_photo", "Все") ?: "Все"
         set(v) = prefs.edit().putString("privacy_photo", v).apply()
 
     var privacyBio: String
-        get() = prefs.getString("privacy_bio", "Все")!!
+        get() = prefs.getString("privacy_bio", "Все") ?: "Все"
         set(v) = prefs.edit().putString("privacy_bio", v).apply()
 
     var powerSave: Boolean
@@ -86,10 +86,10 @@ object LocalPrefs {
     fun formatLocale(): Locale =
         if (forceRu) Locale("ru") else Locale.getDefault()
 
-    fun isMuted(@Suppress("UNUSED_PARAMETER") ctx: Context, chatId: String): Boolean =
+    fun isMuted(chatId: String): Boolean =
         prefs.getStringSet("muted_chats", emptySet())?.contains(chatId) == true
 
-    fun setMuted(@Suppress("UNUSED_PARAMETER") ctx: Context, chatId: String, muted: Boolean) {
+    fun setMuted(chatId: String, muted: Boolean) {
         val s = prefs.getStringSet("muted_chats", emptySet())?.toMutableSet() ?: mutableSetOf()
         if (muted) s.add(chatId) else s.remove(chatId)
         prefs.edit().putStringSet("muted_chats", s).apply()
@@ -97,15 +97,15 @@ object LocalPrefs {
 
     fun presenceIntervalMs(): Long = if (powerSave) 60000L else 20000L
 
-    fun cacheSize(@Suppress("UNUSED_PARAMETER") ctx: Context): Long {
-        val c = ctx.getSharedPreferences("nexus_cache", Context.MODE_PRIVATE)
+    fun cacheSize(): Long {
+        val c = NexusApp.context().getSharedPreferences("nexus_cache", Context.MODE_PRIVATE)
         var sum = 0L
         c.all.values.forEach { sum += ((it as? String)?.length ?: 0).toLong() }
         return sum * 2
     }
 
-    fun clearCache(@Suppress("UNUSED_PARAMETER") ctx: Context) {
-        ctx.getSharedPreferences("nexus_cache", Context.MODE_PRIVATE).edit().clear().apply()
+    fun clearCache() {
+        NexusApp.context().getSharedPreferences("nexus_cache", Context.MODE_PRIVATE).edit().clear().apply()
     }
 
     fun humanSize(bytes: Long): String = when {

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="com.nexus.messenger">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -21,12 +20,12 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="34">
 
-        <!-- Основная Activity (без intent-filter, управляется через alias) -->
+        <!-- Основная Activity -->
         <activity
             android:name=".LoginActivity"
             android:exported="true" />
 
-        <!-- Алиасы для смены иконки (только один может быть enabled="true") -->
+        <!-- Алиасы для смены иконки -->
         <activity-alias
             android:name=".MainActivityClassic"
             android:enabled="true"

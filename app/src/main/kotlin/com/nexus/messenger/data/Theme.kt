@@ -1,19 +1,20 @@
 package com.nexus.messenger.data
 
 import android.graphics.Color
+import com.nexus.messenger.NexusApp
 import com.nexus.messenger.R
 import org.json.JSONObject
 
 object Theme {
     private var colors: JSONObject? = null
 
-    fun load(@Suppress("UNUSED_PARAMETER") ctx: android.content.Context) {
+    fun load() {
         colors = LocalPrefs.themeJson?.let {
             try { JSONObject(it) } catch (e: Exception) { null }
         }
     }
 
-    fun reset(@Suppress("UNUSED_PARAMETER") ctx: android.content.Context) {
+    fun reset() {
         LocalPrefs.themeJson = null
         colors = null
     }
@@ -51,7 +52,7 @@ object Theme {
         return intArrayOf(lighten(bg, 0.10f), bg, darken(bg, 0.45f))
     }
 
-    fun color(ctx: android.content.Context, res: Int): Int {
+    fun color(res: Int): Int {
         val c = when (res) {
             R.color.bgPrimary -> opt("background")
             R.color.bgSecondary -> opt("surface")
@@ -65,6 +66,6 @@ object Theme {
             R.color.messageOther -> opt("surface")
             else -> null
         }
-        return c ?: ctx.resources.getColor(res, null)
+        return c ?: NexusApp.context().resources.getColor(res, null)
     }
 }
