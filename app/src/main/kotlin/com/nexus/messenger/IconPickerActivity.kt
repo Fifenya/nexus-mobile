@@ -88,7 +88,7 @@ class IconPickerActivity : Activity() {
             row.addView(Ui.text(this, opt.name, 16f, R.color.textPrimary),
                 LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(16) })
             row.setOnClickListener {
-                IconManager.apply(this, opt)
+                IconManager.setIcon(this, opt)
                 preview.setImageResource(opt.drawable)
                 currentLabel.text = opt.name
                 Ui.snackbar(this, "Иконка «${opt.name}» выбрана — изменения появятся в лаунчере через минуту")
