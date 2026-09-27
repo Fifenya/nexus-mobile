@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.nexus.messenger">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
+        android:name=".NexusApp"
         android:allowBackup="true"
         android:icon="@drawable/classic"
         android:label="Nexus"
@@ -19,125 +21,138 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="34">
 
+        <!-- Основная Activity (без intent-filter, управляется через alias) -->
         <activity
             android:name=".LoginActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:exported="true" />
 
-        <activity
+        <!-- Алиасы для смены иконки (только один может быть enabled="true") -->
+        <activity-alias
             android:name=".MainActivityClassic"
             android:enabled="true"
             android:exported="true"
-            android:taskAffinity=".classic">
+            android:icon="@drawable/classic"
+            android:label="Nexus"
+            android:targetActivity=".LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
-        <activity
+        <activity-alias
             android:name=".MainActivityNeon"
             android:enabled="false"
             android:exported="true"
-            android:taskAffinity=".neon">
+            android:icon="@drawable/neon"
+            android:label="Nexus"
+            android:targetActivity=".LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
-        <activity
+        <activity-alias
             android:name=".MainActivityCrimson"
             android:enabled="false"
             android:exported="true"
-            android:taskAffinity=".crimson">
+            android:icon="@drawable/crimson"
+            android:label="Nexus"
+            android:targetActivity=".LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
-        <activity
+        <activity-alias
             android:name=".MainActivityLight"
             android:enabled="false"
             android:exported="true"
-            android:taskAffinity=".light">
+            android:icon="@drawable/light"
+            android:label="Nexus"
+            android:targetActivity=".LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
-        <activity
+        <activity-alias
             android:name=".MainActivityEmboss"
             android:enabled="false"
             android:exported="true"
-            android:taskAffinity=".emboss">
+            android:icon="@drawable/emboss"
+            android:label="Nexus"
+            android:targetActivity=".LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
-        <activity
+        <activity-alias
             android:name=".MainActivityLine"
             android:enabled="false"
             android:exported="true"
-            android:taskAffinity=".line">
+            android:icon="@drawable/line"
+            android:label="Nexus"
+            android:targetActivity=".LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
-        <activity
+        <activity-alias
             android:name=".MainActivityBubble"
             android:enabled="false"
             android:exported="true"
-            android:taskAffinity=".bubble">
+            android:icon="@drawable/bubble"
+            android:label="Nexus"
+            android:targetActivity=".LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
-        <activity android:name=".RegisterActivity" />
-        <activity android:name=".ForgotActivity" />
-        <activity android:name=".ChatsActivity" />
-        <activity android:name=".ChatActivity" />
-        <activity android:name=".ContactsActivity" />
-        <activity android:name=".SettingsActivity" />
-        <activity android:name=".ProfileActivity" />
-        <activity android:name=".AccountActivity" />
-        <activity android:name=".PrivacySettingsActivity" />
-        <activity android:name=".NotificationsActivity" />
-        <activity android:name=".DataStorageActivity" />
-        <activity android:name=".FoldersActivity" />
-        <activity android:name=".DevicesActivity" />
-        <activity android:name=".PowerSaveActivity" />
-        <activity android:name=".LanguageActivity" />
-        <activity android:name=".BotsActivity" />
-        <activity android:name=".MotesActivity" />
-        <activity android:name=".MotesPickerActivity" />
-        <activity android:name=".ThemesActivity" />
-        <activity android:name=".IconPickerActivity" />
-        <activity android:name=".GroupInfoActivity" />
-        <activity android:name=".GroupSettingsActivity" />
-        <activity android:name=".InviteActivity" />
-        <activity android:name=".CreateGroupActivity" />
-        <activity android:name=".ShareProfileActivity" />
-        <activity android:name=".ChatSettingsActivity" />
+        <!-- Остальные экраны приложения -->
+        <activity android:name=".RegisterActivity" android:exported="false" />
+        <activity android:name=".ForgotActivity" android:exported="false" />
+        <activity android:name=".ChatsActivity" android:exported="false" />
+        <activity android:name=".ChatActivity" android:exported="false" />
+        <activity android:name=".ContactsActivity" android:exported="false" />
+        <activity android:name=".SettingsActivity" android:exported="false" />
+        <activity android:name=".ProfileActivity" android:exported="false" />
+        <activity android:name=".AccountActivity" android:exported="false" />
+        <activity android:name=".PrivacySettingsActivity" android:exported="false" />
+        <activity android:name=".NotificationsActivity" android:exported="false" />
+        <activity android:name=".DataStorageActivity" android:exported="false" />
+        <activity android:name=".FoldersActivity" android:exported="false" />
+        <activity android:name=".DevicesActivity" android:exported="false" />
+        <activity android:name=".PowerSaveActivity" android:exported="false" />
+        <activity android:name=".LanguageActivity" android:exported="false" />
+        <activity android:name=".BotsActivity" android:exported="false" />
+        <activity android:name=".MotesActivity" android:exported="false" />
+        <activity android:name=".MotesPickerActivity" android:exported="false" />
+        <activity android:name=".ThemesActivity" android:exported="false" />
+        <activity android:name=".IconPickerActivity" android:exported="false" />
+        <activity android:name=".GroupInfoActivity" android:exported="false" />
+        <activity android:name=".GroupSettingsActivity" android:exported="false" />
+        <activity android:name=".InviteActivity" android:exported="false" />
+        <activity android:name=".CreateGroupActivity" android:exported="false" />
+        <activity android:name=".ShareProfileActivity" android:exported="false" />
+        <activity android:name=".ChatSettingsActivity" android:exported="false" />
 
+        <!-- Полноэкранный видеоплеер -->
         <activity
             android:name=".VideoFullscreenActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:screenOrientation="unspecified"
-            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:exported="false" />
 
     </application>
-
 </manifest>
