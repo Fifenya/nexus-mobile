@@ -88,48 +88,61 @@ object MockServer {
     private fun mJson(m: M): JSONObject {
         val attArray = JSONArray()
         m.attachments.forEach { url ->
-            attArray.put(JSONObject().put("type", "image").put("url", url))
+            val attObj = JSONObject()
+            attObj.put("type", "image")
+            attObj.put("url", url)
+            attArray.put(attObj)
         }
         val viewsArray = JSONArray()
         m.views.forEach { uid ->
-            viewsArray.put(JSONObject().put("user", JSONObject().put("id", uid).put("username", BOT_NAME)))
+            val userObj = JSONObject()
+            userObj.put("id", uid)
+            userObj.put("username", BOT_NAME)
+            val viewObj = JSONObject()
+            viewObj.put("user", userObj)
+            viewsArray.put(viewObj)
         }
-        return JSONObject().apply {
-            put("id", m.id)
-            put("text", m.text)
-            put("createdAt", iso(m.ts))
-            put("author", JSONObject().put("id", m.authorId).put("username", m.authorName))
-            put("views", viewsArray)
-            put("attachments", attArray)
-        }
+        val authorObj = JSONObject()
+        authorObj.put("id", m.authorId)
+        authorObj.put("username", m.authorName)
+        val out = JSONObject()
+        out.put("id", m.id)
+        out.put("text", m.text)
+        out.put("createdAt", iso(m.ts))
+        out.put("author", authorObj)
+        out.put("views", viewsArray)
+        out.put("attachments", attArray)
+        return out
     }
 
-    private fun moteJson(m: MoteM): JSONObject = JSONObject().apply {
-        put("id", m.id)
-        put("name", m.name)
-        put("url", m.url)
-        put("tags", "")
-        put("ownerId", m.ownerId)
+    private fun moteJson(m: MoteM): JSONObject {
+        val out = JSONObject()
+        out.put("id", m.id)
+        out.put("name", m.name)
+        out.put("url", m.url)
+        out.put("tags", "")
+        out.put("ownerId", m.ownerId)
+        return out
     }
 
     private fun chatJson(id: String, title: String, type: String): JSONObject {
         val list = chats[id] ?: mutableListOf()
         val last = list.lastOrNull()
-        return JSONObject().apply {
-            put("id", id)
-            put("title", title)
-            put("type", type)
-            put("pinned", false)
-            put("unreadCount", 0)
-            if (last != null) {
-                put("lastMessage", JSONObject().apply {
-                    put("text", last.text.ifEmpty { "📎 Мот" })
-                    put("createdAt", iso(last.ts))
-                })
-            } else {
-                put("lastMessage", JSONObject.NULL)
-            }
+        val out = JSONObject()
+        out.put("id", id)
+        out.put("title", title)
+        out.put("type", type)
+        out.put("pinned", false)
+        out.put("unreadCount", 0)
+        if (last != null) {
+            val lm = JSONObject()
+            lm.put("text", last.text.ifEmpty { "📎 Мот" })
+            lm.put("createdAt", iso(last.ts))
+            out.put("lastMessage", lm)
+        } else {
+            out.put("lastMessage", JSONObject.NULL)
         }
+        return out
     }
 
     fun handle(method: String, path: String, body: JSONObject?, onResult: (Int, String) -> Unit) {
@@ -236,14 +249,14 @@ object MockServer {
                 val id = path.removePrefix("/chats/").removeSuffix("/members")
                 val arr = JSONArray()
                 (members[id] ?: mutableListOf()).forEach { m ->
-                    arr.put(JSONObject().apply {
-                        put("id", "m${m["id"]}")
-                        put("role", m["role"])
-                        put("user", JSONObject().apply {
-                            put("id", m["id"])
-                            put("username", m["username"])
-                        })
-                    })
+                    val userObj = JSONObject()
+                    userObj.put("id", m["id"])
+                    userObj.put("username", m["username"])
+                    val rowObj = JSONObject()
+                    rowObj.put("id", "m${m["id"]}")
+                    rowObj.put("role", m["role"])
+                    rowObj.put("user", userObj)
+                    arr.put(rowObj)
                 }
                 200 to arr.toString()
             }
@@ -275,14 +288,16 @@ object MockServer {
 
             method == "GET" && path.matches(Regex("/chats/[^/]+/settings")) -> {
                 val id = path.removePrefix("/chats/").removeSuffix("/settings")
-                val cur = chatSettings[id] ?: JSONObject().apply {
-                    put("reactions", "all")
-                    put("slowMode", 0)
-                    put("permissions", JSONObject().apply {
-                        put("sendMessages", "all")
-                        put("inviteUsers", "all")
-                        put("pinMessages", "admin")
-                    })
+                val cur = chatSettings[id] ?: run {
+                    val perms = JSONObject()
+                    perms.put("sendMessages", "all")
+                    perms.put("inviteUsers", "all")
+                    perms.put("pinMessages", "admin")
+                    val obj = JSONObject()
+                    obj.put("reactions", "all")
+                    obj.put("slowMode", 0)
+                    obj.put("permissions", perms)
+                    obj
                 }
                 200 to cur.toString()
             }
@@ -294,21 +309,25 @@ object MockServer {
                 200 to cur.toString()
             }
 
-            method == "PATCH" && path.matches(Regex("/chats/[^/]+$")) ->
-                200 to "{\"id\":\"${path.removePrefix("/chats/")}\",\"title\":\"${body?.optString("title") ?: ""}\"}"
+            method == "PATCH" && path.matches(Regex("/chats/[^/]+$")) -> {
+                val out = JSONObject()
+                out.put("id", path.removePrefix("/chats/"))
+                out.put("title", body?.optString("title") ?: "")
+                200 to out.toString()
+            }
 
             method == "GET" && path.matches(Regex("/chats/[^/]+/invites")) -> {
                 val id = path.removePrefix("/chats/").removeSuffix("/invites")
                 val arr = JSONArray()
                 invites.filter { it.chatId == id }.forEach { inv ->
-                    arr.put(JSONObject().apply {
-                        put("id", inv.id)
-                        put("code", inv.code)
-                        put("uses", inv.uses)
-                        val creator = JSONObject()
-                        creator.put("username", MY_NAME)
-                        put("creator", creator)
-                    })
+                    val creator = JSONObject()
+                    creator.put("username", MY_NAME)
+                    val rowObj = JSONObject()
+                    rowObj.put("id", inv.id)
+                    rowObj.put("code", inv.code)
+                    rowObj.put("uses", inv.uses)
+                    rowObj.put("creator", creator)
+                    arr.put(rowObj)
                 }
                 200 to arr.toString()
             }
@@ -317,11 +336,11 @@ object MockServer {
                 val id = path.removePrefix("/chats/").removeSuffix("/invites")
                 val inv = Invite(nextInviteId(), "mock-${(1000..9999).random()}", id)
                 invites.add(inv)
-                200 to JSONObject().apply {
-                    put("id", inv.id)
-                    put("code", inv.code)
-                    put("uses", 0)
-                }.toString()
+                val out = JSONObject()
+                out.put("id", inv.id)
+                out.put("code", inv.code)
+                out.put("uses", 0)
+                200 to out.toString()
             }
 
             method == "DELETE" && path.matches(Regex("/chats/[^/]+/invites/[^/]+")) -> {
@@ -333,11 +352,12 @@ object MockServer {
             method == "POST" && path.matches(Regex("/chats/invites/[^/]+/join")) ->
                 200 to "{\"ok\":true}"
 
-            method == "POST" && path == "/auth/forgot" ->
-                200 to JSONObject().apply {
-                    put("ok", true)
-                    put("message", "Тест-режим: код 123456 «отправлен» в Моты")
-                }.toString()
+            method == "POST" && path == "/auth/forgot" -> {
+                val out = JSONObject()
+                out.put("ok", true)
+                out.put("message", "Тест-режим: код 123456 «отправлен» в Моты")
+                200 to out.toString()
+            }
 
             method == "POST" && path == "/auth/reset" -> {
                 val code = body?.optString("code") ?: ""
@@ -347,8 +367,16 @@ object MockServer {
 
             method == "GET" && path == "/users/search" -> {
                 val arr = JSONArray()
-                arr.put(JSONObject().apply { put("id", "mock-carol"); put("username", "Carol"); put("displayName", "Carol") })
-                arr.put(JSONObject().apply { put("id", "mock-dave"); put("username", "Dave"); put("displayName", "Dave") })
+                val c = JSONObject()
+                c.put("id", "mock-carol")
+                c.put("username", "Carol")
+                c.put("displayName", "Carol")
+                arr.put(c)
+                val d = JSONObject()
+                d.put("id", "mock-dave")
+                d.put("username", "Dave")
+                d.put("displayName", "Dave")
+                arr.put(d)
                 200 to arr.toString()
             }
 
@@ -366,13 +394,14 @@ object MockServer {
         }
     }
 
-    private fun userJson(id: String, name: String, status: String): String =
-        JSONObject().apply {
-            put("id", id)
-            put("username", name)
-            put("displayName", name)
-            put("onlineStatus", status)
-            put("online", status == "online")
-            put("bio", "Локальный пользователь тест-режима")
-        }.toString()
+    private fun userJson(id: String, name: String, status: String): String {
+        val out = JSONObject()
+        out.put("id", id)
+        out.put("username", name)
+        out.put("displayName", name)
+        out.put("onlineStatus", status)
+        out.put("online", status == "online")
+        out.put("bio", "Локальный пользователь тест-режима")
+        return out.toString()
+    }
 }
