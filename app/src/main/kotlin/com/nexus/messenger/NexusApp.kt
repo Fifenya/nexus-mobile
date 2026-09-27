@@ -1,13 +1,18 @@
 package com.nexus.messenger
 
 import android.app.Application
-import com.nexus.messenger.data.LocalPrefs
-import com.nexus.messenger.data.Theme
+import android.content.Context
 
 class NexusApp : Application() {
+    companion object {
+        lateinit var instance: NexusApp
+            private set
+
+        fun context(): Context = instance.applicationContext
+    }
+
     override fun onCreate() {
         super.onCreate()
-        LocalPrefs.init(this)
-        Theme.load(this)
+        instance = this
     }
 }
