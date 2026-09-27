@@ -26,9 +26,9 @@ class ThemesActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Theme.color(this, R.color.bgPrimary))
+            setBackgroundColor(color(R.color.bgPrimary))
         }
-        root.addView(header("Темы оформления"))
+        root.addView(headerView("Темы оформления"), LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         val scroll = ScrollView(this)
         val content = LinearLayout(this).apply {
@@ -36,8 +36,8 @@ class ThemesActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(32))
         }
 
-        content.addView(Ui.text(this, "Темы загружаются с сервера Nexus. Цвета применяются ко всему интерфейсу.", 12f, R.color.textMuted),
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = dp(10) })
+        val note = Ui.text(this, "Темы загружаются с сервера Nexus. Цвета применяются ко всему интерфейсу.", 12f, R.color.textMuted)
+        content.addView(note, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = dp(10) })
 
         listCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -45,7 +45,7 @@ class ThemesActivity : Activity() {
         }
         content.addView(listCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        scroll.addView(content)
+        scroll.addView(content, ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         setContentView(root)
 
@@ -54,34 +54,36 @@ class ThemesActivity : Activity() {
 
     private fun color(res: Int): Int = Theme.color(this, res)
 
-    private fun header(title: String): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setBackgroundColor(color(R.color.bgSecondary))
-        setPadding(dp(4), dp(10), dp(16), dp(10))
-        val back = TextView(this@ThemesActivity).apply {
-            text = "←"
-            textSize = 24f
-            setTextColor(color(R.color.accentText))
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+    private fun headerView(title: String): LinearLayout {
+        val ctx = this
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(ctx.resources.getColor(R.color.bgSecondary, null))
+            setPadding(dp(4), dp(10), dp(16), dp(10))
+            val back = TextView(ctx).apply {
+                text = "←"
+                textSize = 24f
+                setTextColor(ctx.resources.getColor(R.color.accentText, null))
+                setPadding(dp(12), dp(8), dp(12), dp(8))
+            }
+            back.setOnClickListener { finish() }
+            addView(back)
+            addView(Ui.text(ctx, title, 20f, R.color.textPrimary, true),
+                LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(8) })
         }
-        back.setOnClickListener { finish() }
-        addView(back)
-        addView(Ui.text(this@ThemesActivity, title, 20f, R.color.textPrimary, true),
-            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(8) })
     }
 
     private fun load() {
         listCard.removeAllViews()
-        listCard.addView(Ui.text(this, "Загрузка тем…", 14f, R.color.textMuted)
-            .apply { setPadding(dp(16), dp(14), dp(16), dp(14)) },
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        val loading = Ui.text(this, "Загрузка тем…", 14f, R.color.textMuted)
+        loading.setPadding(dp(16), dp(14), dp(16), dp(14))
+        listCard.addView(loading, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         Api.get("/themes") { code, body ->
             runOnUiThread {
                 listCard.removeAllViews()
 
-                // Стандартная тема
                 addThemeRow(
                     id = null,
                     name = "Стандартная (тёмно-красная)",
@@ -103,20 +105,21 @@ class ThemesActivity : Activity() {
                             parseOr(colors.optString("accent"), 0xFFDC2626.toInt()),
                             parseOr(colors.optString("text"), 0xFFFFFFFF.toInt())
                         )
-                        addThemeRow(id, name, preview, colors)
-                        if (i < arr.length() - 1) {
-                            listCard.addView(View(this).apply { setBackgroundColor(color(R.color.divider)) },
-                                LinearLayout.LayoutParams(MATCH_PARENT, 1).apply { leftMargin = dp(16) })
+                        if (i > 0) {
+                            listCard.addView(dividerView(), LinearLayout.LayoutParams(MATCH_PARENT, 1).apply { leftMargin = dp(16) })
                         }
+                        addThemeRow(id, name, preview, colors)
                     }
                 } else {
-                    listCard.addView(Ui.text(this, "Сервер тем недоступен — показана только стандартная", 12f, R.color.textMuted)
-                        .apply { setPadding(dp(16), dp(4), dp(16), dp(14)) },
-                        LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+                    val err = Ui.text(this, "Сервер тем недоступен — показана только стандартная", 12f, R.color.textMuted)
+                    err.setPadding(dp(16), dp(4), dp(16), dp(14))
+                    listCard.addView(err, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
                 }
             }
         }
     }
+
+    private fun dividerView() = View(this).apply { setBackgroundColor(color(R.color.divider)) }
 
     private fun parseOr(s: String?, fallback: Int): Int =
         if (s != null && s.startsWith("#")) {
@@ -131,7 +134,6 @@ class ThemesActivity : Activity() {
             setPadding(dp(16), dp(12), dp(16), dp(12))
         }
 
-        // Превью: 4 цветных круга
         val dots = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         preview.forEach { c ->
             dots.addView(View(this).apply {

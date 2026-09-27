@@ -8,8 +8,6 @@ import io.socket.emitter.Emitter
 import org.json.JSONObject
 import java.net.URI
 
-// ─── DTO-события гейтвея ───
-
 data class RtMessage(
     val id: String,
     val chatId: String,
@@ -41,15 +39,6 @@ data class RtChatUpdate(
     val lastMessageAt: String?
 )
 
-/**
- * Realtime-клиент под chat.gateway.ts:
- *   авторизация: handshake.auth.token
- *   комнаты: user:{userId}, chat:{chatId} (обе — на сервере при connect)
- *   входящие события: message:new / updated / deleted / reaction,
- *                     typing:update, presence:update, chat:updated
- *   исходящие: message:send / edit / delete / react,
- *              typing:start / stop, chat:join
- */
 object RealtimeClient {
     const val STATE_CONNECTING = "connecting"
     const val STATE_ONLINE = "online"
@@ -62,11 +51,14 @@ object RealtimeClient {
     var state: String = STATE_OFFLINE
         private set
 
+    private val stateListeners = mutableListOf<(String) -> Unit>()
     private val messageNewL = mutableListOf<(RtMessage) -> Unit>()
     private val chatUpdateL = mutableListOf<(RtChatUpdate) -> Unit>()
     private val typingL = mutableListOf<(RtTyping) -> Unit>()
     private val presenceL = mutableListOf<(RtPresence) -> Unit>()
 
+    fun addStateListener(l: (String) -> Unit) { stateListeners.add(l) }
+    fun removeStateListener(l: (String) -> Unit) { stateListeners.remove(l) }
     fun addMessageListener(l: (RtMessage) -> Unit) { messageNewL.add(l) }
     fun removeMessageListener(l: (RtMessage) -> Unit) { messageNewL.remove(l) }
     fun addChatUpdateListener(l: (RtChatUpdate) -> Unit) { chatUpdateL.add(l) }
@@ -78,6 +70,7 @@ object RealtimeClient {
 
     private fun setState(s: String) {
         state = s
+        stateListeners.toList().forEach { runCatching { it(s) } }
     }
 
     @Synchronized
@@ -101,8 +94,6 @@ object RealtimeClient {
 
     fun isConnected(): Boolean = state == STATE_ONLINE && socket?.connected() == true
 
-    // ─── Подключение ───
-
     private fun connect(ctx: Context) {
         val token = Store.token
         if (token.isNullOrEmpty()) {
@@ -123,25 +114,21 @@ object RealtimeClient {
             socket = s
 
             s.on(Socket.EVENT_CONNECT) { setState(STATE_ONLINE) }
-            s.on(Socket.EVENT_CONNECTING) { setState(STATE_CONNECTING) }
             s.on(Socket.EVENT_DISCONNECT) { setState(STATE_OFFLINE) }
             s.on(Socket.EVENT_CONNECT_ERROR) { setState(STATE_CONNECTING) }
 
-            // ── message:new: полный Prisma-объект сообщения ──
             s.on("message:new", Emitter.Listener { args ->
                 parseMessage(args.firstOrNull())?.let { m ->
                     messageNewL.toList().forEach { runCatching { it(m) } }
                 }
             })
 
-            // ── chat:updated: сервер прислал обновлённые метаданные чата ──
             s.on("chat:updated", Emitter.Listener { args ->
                 parseChatUpdate(args.firstOrNull())?.let { u ->
                     chatUpdateL.toList().forEach { runCatching { it(u) } }
                 }
             })
 
-            // ── typing:update ──
             s.on("typing:update", Emitter.Listener { args ->
                 val p = args.firstOrNull() as? JSONObject ?: return@Listener
                 val t = RtTyping(
@@ -154,7 +141,6 @@ object RealtimeClient {
                 }
             })
 
-            // ── presence:update (с учётом приватности: hidden=true если scope=NOBODY) ──
             s.on("presence:update", Emitter.Listener { args ->
                 val p = args.firstOrNull() as? JSONObject ?: return@Listener
                 val pr = RtPresence(
@@ -174,8 +160,6 @@ object RealtimeClient {
             setState(STATE_OFFLINE)
         }
     }
-
-    // ─── Парсеры входящих событий ───
 
     private fun parseMessage(raw: Any?): RtMessage? {
         val payload = when (raw) {
@@ -221,13 +205,6 @@ object RealtimeClient {
         return RtChatUpdate(id, title, lmText, lmAt)
     }
 
-    // ─── Исходящие сообщения ───
-
-    /**
-     * Отправка через сокет с ack.
-     * onResult(ok, payload) — ok=true если сервер прислал созданный message (id не пустой).
-     * Возвращает true, если emit прошёл (или в очереди); false — сокет недоступен, нужен HTTP-fallback.
-     */
     fun sendMessage(
         chatId: String,
         text: String,
@@ -287,8 +264,6 @@ object RealtimeClient {
         s.emit("message:react", payload, ack)
     }
 
-    // ─── Тайпинг ───
-
     fun startTyping(chatId: String) {
         val s = socket ?: return
         s.emit("typing:start", JSONObject().put("chatId", chatId))
@@ -298,8 +273,6 @@ object RealtimeClient {
         val s = socket ?: return
         s.emit("typing:stop", JSONObject().put("chatId", chatId))
     }
-
-    // ─── Комнаты ───
 
     fun joinChat(chatId: String) {
         val s = socket ?: return

@@ -19,6 +19,7 @@ import com.nexus.messenger.data.Theme
 import com.nexus.messenger.ui.BottomNav
 import com.nexus.messenger.ui.NxDialog
 import com.nexus.messenger.ui.Ui
+import com.nexus.messenger.ui.appVersionName
 import com.nexus.messenger.ui.dp
 
 class SettingsActivity : Activity() {
@@ -149,7 +150,7 @@ class SettingsActivity : Activity() {
         ))
 
         content.addView(
-            Ui.text(this, "Nexus Messenger v1.0.0", 12f, R.color.textMuted),
+            Ui.text(this, "Nexus Messenger v${appVersionName()}", 12f, R.color.textMuted),
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
                 topMargin = dp(20)
                 gravity = Gravity.CENTER_HORIZONTAL

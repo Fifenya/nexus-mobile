@@ -30,6 +30,7 @@ import com.nexus.messenger.data.FoldersStore
 import com.nexus.messenger.data.LocalPrefs
 import com.nexus.messenger.data.Notify
 import com.nexus.messenger.data.RealtimeClient
+import com.nexus.messenger.data.RtChatUpdate
 import com.nexus.messenger.data.RtMessage
 import com.nexus.messenger.data.Store
 import com.nexus.messenger.ui.BottomNav
@@ -76,6 +77,10 @@ class ChatsActivity : Activity() {
         }
     }
 
+    private val chatUpdateListener: (RtChatUpdate) -> Unit = { _ ->
+        runOnUiThread { loadChats(true) }
+    }
+
     private val msgListener: (RtMessage) -> Unit = { m ->
         runOnUiThread {
             if (m.senderId != Store.user?.id) {
@@ -120,8 +125,7 @@ class ChatsActivity : Activity() {
         }
         header.addView(logo, LinearLayout.LayoutParams(dp(36), dp(36)))
         titleTv = Ui.text(this, if (Store.testMode) "Nexus · ТЕСТ" else "Nexus", 22f, R.color.textPrimary, true)
-        header.addView(titleTv,
-            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(12) })
+        header.addView(titleTv, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(12) })
         val dots = ImageView(this).apply {
             setImageResource(R.drawable.ic_dots)
             imageTintList = ColorStateList.valueOf(color(R.color.textSecondary))
@@ -165,7 +169,6 @@ class ChatsActivity : Activity() {
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding(dp(14), dp(10), dp(16), dp(10))
                 }
-
                 val avatar = TextView(context).apply {
                     text = (chat.title ?: "Ч").take(1).uppercase()
                     textSize = 20f
@@ -177,7 +180,6 @@ class ChatsActivity : Activity() {
                 row.addView(avatar, LinearLayout.LayoutParams(dp(54), dp(54)))
 
                 val mid = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-
                 val line1 = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -217,7 +219,6 @@ class ChatsActivity : Activity() {
                     }, LinearLayout.LayoutParams(WRAP_CONTENT, dp(20)).apply { leftMargin = dp(8) })
                 }
                 mid.addView(line2, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(3) })
-
                 row.addView(mid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(14) })
                 return row
             }
@@ -302,6 +303,7 @@ class ChatsActivity : Activity() {
 
         RealtimeClient.retain(this)
         RealtimeClient.addStateListener(stateListener)
+        RealtimeClient.addChatUpdateListener(chatUpdateListener)
         RealtimeClient.addMessageListener(msgListener)
         stateListener(RealtimeClient.state)
         dotsHandler.post(dotsTask)
@@ -316,6 +318,7 @@ class ChatsActivity : Activity() {
     override fun onDestroy() {
         dotsHandler.removeCallbacks(dotsTask)
         RealtimeClient.removeStateListener(stateListener)
+        RealtimeClient.removeChatUpdateListener(chatUpdateListener)
         RealtimeClient.removeMessageListener(msgListener)
         RealtimeClient.release()
         super.onDestroy()

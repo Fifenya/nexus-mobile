@@ -67,7 +67,7 @@ class ChatActivity : Activity() {
         override fun run() {
             if (typingSent) {
                 typingSent = false
-                RealtimeClient.emitTyping(chatId, false)
+                RealtimeClient.stopTyping(chatId)
             }
         }
     }
@@ -80,9 +80,6 @@ class ChatActivity : Activity() {
 
     private val msgListener: (RtMessage) -> Unit = { m ->
         runOnUiThread { if (m.chatId == chatId) loadMessages() }
-    }
-    private val dirtyListener: (String) -> Unit = { cid ->
-        runOnUiThread { if (cid == chatId) loadMessages() }
     }
     private val typingListener: (RtTyping) -> Unit = { t ->
         runOnUiThread {
@@ -114,7 +111,7 @@ class ChatActivity : Activity() {
         0xFFA695E7.toInt(), 0xFFEE7AAE.toInt(), 0xFF6EC9CB.toInt(), 0xFFFAA774.toInt()
     )
 
-    private val quickEmojis = listOf("❤️", "👍", "🔥", "⭐", "😭", "")
+    private val quickEmojis = listOf("❤️", "👍", "🔥", "⭐", "😭", "🤝")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -392,13 +389,12 @@ class ChatActivity : Activity() {
 
         setContentView(root)
 
-        // Индикатор «печатает…» у собеседника
         input.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
                 if (!typingSent) {
                     typingSent = true
-                    RealtimeClient.emitTyping(chatId, true)
+                    RealtimeClient.startTyping(chatId)
                 }
                 handler.removeCallbacks(stopTypingTask)
                 handler.postDelayed(stopTypingTask, 2500)
@@ -443,7 +439,6 @@ class ChatActivity : Activity() {
 
         RealtimeClient.retain(this)
         RealtimeClient.addMessageListener(msgListener)
-        RealtimeClient.addChatDirtyListener(dirtyListener)
         RealtimeClient.addTypingListener(typingListener)
         RealtimeClient.addPresenceListener(presenceListener)
 
@@ -462,7 +457,6 @@ class ChatActivity : Activity() {
         handler.removeCallbacks(stopTypingTask)
         handler.removeCallbacks(typingRevertTask)
         RealtimeClient.removeMessageListener(msgListener)
-        RealtimeClient.removeChatDirtyListener(dirtyListener)
         RealtimeClient.removeTypingListener(typingListener)
         RealtimeClient.removePresenceListener(presenceListener)
         RealtimeClient.release()
@@ -506,7 +500,7 @@ class ChatActivity : Activity() {
         handler.removeCallbacks(stopTypingTask)
         if (typingSent) {
             typingSent = false
-            RealtimeClient.emitTyping(chatId, false)
+            RealtimeClient.stopTyping(chatId)
         }
     }
 
@@ -532,7 +526,7 @@ class ChatActivity : Activity() {
         }
 
         val replyId = replyTo?.id
-        val sentViaSocket = RealtimeClient.sendMessageViaSocket(chatId, text, replyId) { ok, _ ->
+        val sentViaSocket = RealtimeClient.sendMessage(chatId, text, replyId) { ok, _ ->
             runOnUiThread {
                 sendBtn.isEnabled = true
                 if (ok) {
@@ -621,8 +615,7 @@ class ChatActivity : Activity() {
             }
             return
         }
-        // При живом сокете присутствие приходит событием presence:update
-        if (RealtimeClient.state == RealtimeClient.STATE_ONLINE) return
+        if (RealtimeClient.isConnected()) return
         Api.get("/users/$oid") { code, body ->
             runOnUiThread {
                 if (code != 200) return@runOnUiThread

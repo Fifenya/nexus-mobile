@@ -17,6 +17,7 @@ import com.nexus.messenger.data.User
 import com.nexus.messenger.ui.Backgrounds
 import com.nexus.messenger.ui.NxDialog
 import com.nexus.messenger.ui.Ui
+import com.nexus.messenger.ui.appVersionName
 import com.nexus.messenger.ui.dp
 import org.json.JSONObject
 
@@ -48,7 +49,7 @@ class LoginActivity : Activity() {
 
         root.addView(Ui.text(this, "Nexus", 34f, R.color.textPrimary, true),
             LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(22) })
-        root.addView(Ui.text(this, "Защищённый мессенджер · v1.0.0", 13f, R.color.textMuted),
+        root.addView(Ui.text(this, "Защищённый мессенджер · v${appVersionName()}", 13f, R.color.textMuted),
             LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(4) })
 
         val card = LinearLayout(this).apply {

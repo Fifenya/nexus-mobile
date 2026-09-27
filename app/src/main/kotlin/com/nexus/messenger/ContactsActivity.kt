@@ -2,7 +2,6 @@ package com.nexus.messenger
 
 import android.app.Activity
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -12,7 +11,6 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
@@ -29,6 +27,7 @@ class ContactsActivity : Activity() {
     private lateinit var search: EditText
     private lateinit var listView: ListView
     private lateinit var emptyView: LinearLayout
+    private lateinit var emptyTitle: TextView
     private val results = mutableListOf<User>()
     private lateinit var adapter: ArrayAdapter<User>
 
@@ -45,10 +44,9 @@ class ContactsActivity : Activity() {
 
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
 
-        root.addView(Ui.text(this, "Контакты", 22f, R.color.textPrimary, true),
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                setPadding(dp(16), dp(14), dp(16), dp(10))
-            })
+        val title = Ui.text(this, "Контакты", 22f, R.color.textPrimary, true)
+        title.setPadding(dp(16), dp(14), dp(16), dp(10))
+        root.addView(title, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         search = EditText(this).apply {
             hint = "Поиск по имени пользователя"
@@ -95,7 +93,7 @@ class ContactsActivity : Activity() {
         }
 
         listView = ListView(this).apply {
-            this.adapter = this@ContactsActivity.adapter
+            adapter = this@ContactsActivity.adapter
             setBackgroundColor(color(R.color.bgPrimary))
             divider = null
             dividerHeight = 0
@@ -115,8 +113,8 @@ class ContactsActivity : Activity() {
             textSize = 64f
             gravity = Gravity.CENTER
         }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-        emptyView.addView(Ui.text(this, "Добавить контакты", 20f, R.color.textPrimary, true),
-            LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(16) })
+        emptyTitle = Ui.text(this, "Добавить контакты", 20f, R.color.textPrimary, true)
+        emptyView.addView(emptyTitle, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(16) })
         emptyView.addView(Ui.text(this, "Найдите друзей по имени пользователя — Nexus покажет всех, кто зарегистрирован на сервере.", 14f, R.color.textSecondary),
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(8) })
         val newBtn = LinearLayout(this).apply {
@@ -143,18 +141,19 @@ class ContactsActivity : Activity() {
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
                 val q = s?.toString()?.trim() ?: ""
-                if (q.length >= 2) doSearch(q) else showEmpty()
+                if (q.length >= 2) doSearch(q) else showEmpty("Добавить контакты")
             }
         })
     }
 
     private fun color(res: Int): Int = resources.getColor(res, null)
 
-    private fun showEmpty() {
+    private fun showEmpty(titleText: String) {
         results.clear()
         adapter.notifyDataSetChanged()
         listView.visibility = View.GONE
         emptyView.visibility = View.VISIBLE
+        emptyTitle.text = titleText
     }
 
     private fun doSearch(q: String) {
@@ -169,12 +168,11 @@ class ContactsActivity : Activity() {
                     }
                 }
                 adapter.notifyDataSetChanged()
-                listView.visibility = if (results.isEmpty()) View.GONE else View.VISIBLE
-                emptyView.visibility = if (results.isEmpty()) View.VISIBLE else View.GONE
                 if (results.isEmpty()) {
-                    emptyView.getChildAt(1)?.let { (it as TextView).text = "Никого не нашли" }
+                    showEmpty("Никого не нашли")
                 } else {
                     emptyView.visibility = View.GONE
+                    listView.visibility = View.VISIBLE
                 }
             }
         }
@@ -194,7 +192,7 @@ class ContactsActivity : Activity() {
                             .putExtra("chatId", chatId)
                             .putExtra("title", u.displayName ?: u.username))
                     } else {
-                        com.nexus.messenger.ui.Ui.snackbar(this, "Чат создан, обновите список")
+                        Ui.snackbar(this, "Чат создан, обновите список")
                     }
                 } else {
                     Ui.snackbar(this, Api.friendlyError(body))

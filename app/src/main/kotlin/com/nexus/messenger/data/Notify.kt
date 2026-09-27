@@ -15,9 +15,9 @@ object Notify {
     private var lastId = 1000
 
     fun ensureChannel(ctx: Context) {
+        val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (nm.getChannel(CHANNEL) == null) {
+            if (nm.getNotificationChannel(CHANNEL) == null) {
                 val ch = NotificationChannel(
                     CHANNEL,
                     "Сообщения Nexus",
@@ -25,7 +25,7 @@ object Notify {
                 ).apply {
                     description = "Новые сообщения в чатах"
                 }
-                nm.createChannel(ch)
+                nm.createNotificationChannel(ch)
             }
         }
     }

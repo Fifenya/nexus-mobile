@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -34,135 +35,23 @@ class ChatSettingsActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(color(R.color.bgPrimary))
         }
-        root.addView(header("Настройки чатов"))
+        root.addView(headerView("Настройки чатов"), LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         val scroll = ScrollView(this)
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(12), dp(12), dp(32))
         }
-
-        // ── Предпросмотр ──
-        previewWrap = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(20), dp(16), dp(20))
-        }
-        previewBubble = TextView(this).apply {
-            text = "Доброе утро! 👋"
-            setTextColor(0xFFFFFFFF.toInt())
-            setPadding(dp(12), dp(8), dp(12), dp(8))
-            gravity = Gravity.END
-        }
-        previewWrap.addView(previewBubble, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
-            gravity = Gravity.END
-        })
-        content.addView(previewWrap, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-
-        // ── Размер текста ──
-        addCard(content, card {
-            addView(rowTitle("Размер текста сообщений"))
-            sizeValue = Ui.text(this@ChatSettingsActivity, "${LocalPrefs.chatTextSize}", 14f, R.color.accentText, true)
-            val line = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(16), dp(4), dp(16), dp(12))
-            }
-            val seek = seek(LocalPrefs.chatTextSize - 12, 8) { p ->
-                LocalPrefs.chatTextSize = 12 + p
-                sizeValue.text = "${12 + p}"
-                applyPreview()
-            }
-            line.addView(seek, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-            line.addView(sizeValue, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(12) })
-            addView(line, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-        })
-
-        // ── Скругления ──
-        addCard(content, card {
-            addView(rowTitle("Углы блоков с сообщениями"))
-            radiusValue = Ui.text(this@ChatSettingsActivity, "${LocalPrefs.chatRadius}", 14f, R.color.accentText, true)
-            val line = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(16), dp(4), dp(16), dp(12))
-            }
-            val seek = seek(LocalPrefs.chatRadius, 24) { p ->
-                LocalPrefs.chatRadius = p
-                radiusValue.text = "$p"
-                applyPreview()
-            }
-            line.addView(seek, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-            line.addView(radiusValue, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(12) })
-            addView(line, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-        })
-
-        // ── Цвет фона ──
-        addCard(content, card {
-            addView(rowTitle("Цвет фона чата"))
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(dp(16), dp(8), dp(16), dp(16))
-            }
-            LocalPrefs.chatBgColors.forEachIndexed { i, c ->
-                val sw = TextView(this)
-                sw.setOnClickListener {
-                    LocalPrefs.chatBgIndex = i
-                    refreshSwatches()
-                    applyPreview()
-                }
-                swatches.add(sw)
-                row.addView(sw, LinearLayout.LayoutParams(dp(44), dp(44)).apply { rightMargin = dp(12) })
-            }
-            addView(row, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-        })
-
-        // ── Паттерн обоев ──
-        addCard(content, card {
-            addView(rowTitle("Обои: рисунок"))
-            val chipsScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
-            val chipsRow = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(dp(16), dp(4), dp(16), dp(16))
-            }
-            patternNames.forEachIndexed { i, name ->
-                val chip = TextView(this)
-                chip.setOnClickListener {
-                    LocalPrefs.wallpaperPattern = i
-                    refreshPatternChips()
-                    applyPreview()
-                }
-                patternChips.add(chip)
-                chip.text = name
-                chipsRow.addView(chip, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
-                    rightMargin = dp(8)
-                })
-            }
-            chipsScroll.addView(chipsRow, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-            addView(chipsScroll, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-        })
-
-        // ── Имена в группах ──
-        addCard(content, card {
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(16), dp(12), dp(16), dp(12))
-            }
-            val mid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            mid.addView(Ui.text(this@ChatSettingsActivity, "Имена отправителей в группах", 16f, R.color.textPrimary),
-                LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-            mid.addView(Ui.text(this@ChatSettingsActivity, "Показывать, кто написал сообщение", 13f, R.color.textSecondary),
-                LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(2) })
-            row.addView(mid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-            row.addView(Ui.switch(this@ChatSettingsActivity, LocalPrefs.chatShowNames) { on ->
-                LocalPrefs.chatShowNames = on
-            }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-            addView(row, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-        })
-
-        scroll.addView(content)
+        scroll.addView(content, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         setContentView(root)
+
+        content.addView(buildPreview(), cardLp())
+        content.addView(buildSizeCard(), cardLp())
+        content.addView(buildRadiusCard(), cardLp())
+        content.addView(buildColorCard(), cardLp())
+        content.addView(buildPatternCard(), cardLp())
+        content.addView(buildNamesCard(), cardLp())
 
         refreshSwatches()
         refreshPatternChips()
@@ -171,21 +60,17 @@ class ChatSettingsActivity : Activity() {
 
     private fun color(res: Int): Int = resources.getColor(res, null)
 
-    private fun seek(progress: Int, max: Int, onChange: (Int) -> Unit): SeekBar = SeekBar(this).apply {
-        this.max = max
-        this.progress = progress
-        progressTintList = ColorStateList.valueOf(color(R.color.accent))
-        thumbTintList = ColorStateList.valueOf(color(R.color.accent))
-        setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(s: SeekBar?, p: Int, from: Boolean) {
-                if (from) onChange(p)
-            }
-            override fun onStartTrackingTouch(s: SeekBar?) {}
-            override fun onStopTrackingTouch(s: SeekBar?) {}
-        })
+    private fun cardLp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) }
+
+    private fun cardView(): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        background = Ui.card(this@ChatSettingsActivity)
     }
 
-    private fun header(title: String): LinearLayout = LinearLayout(this).apply {
+    private fun rowTitle(s: String): TextView =
+        Ui.text(this, s, 13f, R.color.accentText, true).apply { setPadding(dp(16), dp(14), dp(16), dp(6)) }
+
+    private fun headerView(title: String): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setBackgroundColor(color(R.color.bgSecondary))
@@ -202,22 +87,140 @@ class ChatSettingsActivity : Activity() {
             LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(8) })
     }
 
-    private fun card(build: LinearLayout.() -> Unit): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        background = Ui.card(this@ChatSettingsActivity)
-        build()
+    private fun buildPreview(): LinearLayout {
+        previewWrap = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(20), dp(16), dp(20))
+        }
+        previewBubble = TextView(this).apply {
+            text = "Доброе утро! 👋"
+            setTextColor(0xFFFFFFFF.toInt())
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            gravity = Gravity.END
+        }
+        previewWrap.addView(previewBubble, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+            gravity = Gravity.END
+        })
+        return previewWrap
     }
 
-    private fun addCard(parent: LinearLayout, cardView: LinearLayout) {
-        parent.addView(cardView, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-            topMargin = dp(10)
+    private fun seekBar(progress: Int, max: Int, onChange: (Int) -> Unit): SeekBar = SeekBar(this).apply {
+        this.max = max
+        this.progress = progress
+        progressTintList = ColorStateList.valueOf(color(R.color.accent))
+        thumbTintList = ColorStateList.valueOf(color(R.color.accent))
+        setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, from: Boolean) {
+                if (from) onChange(p)
+            }
+            override fun onStartTrackingTouch(s: SeekBar?) {}
+            override fun onStopTrackingTouch(s: SeekBar?) {}
         })
     }
 
-    private fun rowTitle(s: String): TextView =
-        Ui.text(this, s, 13f, R.color.accentText, true).apply {
-            setPadding(dp(16), dp(14), dp(16), dp(6))
+    private fun buildSizeCard(): LinearLayout {
+        val card = cardView()
+        card.addView(rowTitle("Размер текста сообщений"))
+        sizeValue = Ui.text(this, "${LocalPrefs.chatTextSize}", 14f, R.color.accentText, true)
+        val line = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(4), dp(16), dp(12))
         }
+        val seek = seekBar(LocalPrefs.chatTextSize - 12, 8) { p ->
+            LocalPrefs.chatTextSize = 12 + p
+            sizeValue.text = "${12 + p}"
+            applyPreview()
+        }
+        line.addView(seek, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        line.addView(sizeValue, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(12) })
+        card.addView(line, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        return card
+    }
+
+    private fun buildRadiusCard(): LinearLayout {
+        val card = cardView()
+        card.addView(rowTitle("Углы блоков с сообщениями"))
+        radiusValue = Ui.text(this, "${LocalPrefs.chatRadius}", 14f, R.color.accentText, true)
+        val line = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(4), dp(16), dp(12))
+        }
+        val seek = seekBar(LocalPrefs.chatRadius, 24) { p ->
+            LocalPrefs.chatRadius = p
+            radiusValue.text = "$p"
+            applyPreview()
+        }
+        line.addView(seek, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        line.addView(radiusValue, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(12) })
+        card.addView(line, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        return card
+    }
+
+    private fun buildColorCard(): LinearLayout {
+        val card = cardView()
+        card.addView(rowTitle("Цвет фона чата"))
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(dp(16), dp(8), dp(16), dp(16))
+        }
+        LocalPrefs.chatBgColors.forEachIndexed { i, _ ->
+            val sw = TextView(this)
+            sw.setOnClickListener {
+                LocalPrefs.chatBgIndex = i
+                refreshSwatches()
+                applyPreview()
+            }
+            swatches.add(sw)
+            row.addView(sw, LinearLayout.LayoutParams(dp(44), dp(44)).apply { rightMargin = dp(12) })
+        }
+        card.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        return card
+    }
+
+    private fun buildPatternCard(): LinearLayout {
+        val card = cardView()
+        card.addView(rowTitle("Обои: рисунок"))
+        val chipsScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
+        val chipsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(dp(16), dp(4), dp(16), dp(16))
+        }
+        patternNames.forEachIndexed { i, name ->
+            val chip = TextView(this).apply { text = name }
+            chip.setOnClickListener {
+                LocalPrefs.wallpaperPattern = i
+                refreshPatternChips()
+                applyPreview()
+            }
+            patternChips.add(chip)
+            chipsRow.addView(chip, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { rightMargin = dp(8) })
+        }
+        chipsScroll.addView(chipsRow, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+        card.addView(chipsScroll, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        return card
+    }
+
+    private fun buildNamesCard(): LinearLayout {
+        val card = cardView()
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+        }
+        val mid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        mid.addView(Ui.text(this@ChatSettingsActivity, "Имена отправителей в группах", 16f, R.color.textPrimary),
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        mid.addView(Ui.text(this@ChatSettingsActivity, "Показывать, кто написал сообщение", 13f, R.color.textSecondary),
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(2) })
+        row.addView(mid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        row.addView(Ui.switch(this@ChatSettingsActivity, LocalPrefs.chatShowNames) { on ->
+            LocalPrefs.chatShowNames = on
+        }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+        card.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        return card
+    }
 
     private fun refreshSwatches() {
         swatches.forEachIndexed { i, sw ->
@@ -232,7 +235,7 @@ class ChatSettingsActivity : Activity() {
     private fun refreshPatternChips() {
         patternChips.forEachIndexed { i, chip ->
             val selected = i == LocalPrefs.wallpaperPattern
-            chip.setTextSize(13f)
+            chip.textSize = 13f
             chip.setPadding(dp(16), dp(8), dp(16), dp(8))
             chip.setTextColor(color(if (selected) R.color.textPrimary else R.color.textSecondary))
             chip.paint.isFakeBoldText = selected

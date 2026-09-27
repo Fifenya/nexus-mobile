@@ -3,6 +3,7 @@ package com.nexus.messenger
 import android.app.Activity
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
@@ -24,7 +25,7 @@ class PowerSaveActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(color(R.color.bgPrimary))
         }
-        root.addView(header("Энергосбережение"))
+        root.addView(headerView("Энергосбережение"), LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         val scroll = ScrollView(this)
         val content = LinearLayout(this).apply {
@@ -55,21 +56,20 @@ class PowerSaveActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             background = Ui.card(this@PowerSaveActivity)
         }
-        infoCard.addView(Ui.text(this, "Что меняется", 13f, R.color.accentText, true)
-            .apply { setPadding(dp(16), dp(14), dp(16), dp(6)) },
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        val label = Ui.text(this, "Что меняется", 13f, R.color.accentText, true)
+        label.setPadding(dp(16), dp(14), dp(16), dp(6))
+        infoCard.addView(label, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         pollValue = Ui.text(this, "", 15f, R.color.textPrimary)
         infoCard.addView(valueRow("Опрос статуса «в сети»", pollValue))
-        infoCard.addView(View(this).apply { setBackgroundColor(color(R.color.divider)) },
-            LinearLayout.LayoutParams(MATCH_PARENT, 1).apply { leftMargin = dp(16) })
+        infoCard.addView(dividerView(), LinearLayout.LayoutParams(MATCH_PARENT, 1))
         refreshValue = Ui.text(this, "", 15f, R.color.textPrimary)
         infoCard.addView(valueRow("Обновление списка чатов", refreshValue))
         content.addView(infoCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) })
 
-        content.addView(Ui.text(this, "Сообщения по-прежнему доставляются при открытом чате. Режим влияет только на фоновую активность.", 12f, R.color.textMuted),
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12) })
+        val note = Ui.text(this, "Сообщения по-прежнему доставляются при открытом чате. Режим влияет только на фоновую активность.", 12f, R.color.textMuted)
+        content.addView(note, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12) })
 
-        scroll.addView(content)
+        scroll.addView(content, ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         setContentView(root)
         refreshValues()
@@ -77,22 +77,24 @@ class PowerSaveActivity : Activity() {
 
     private fun color(res: Int): Int = resources.getColor(res, null)
 
+    private fun dividerView() = View(this).apply { setBackgroundColor(color(R.color.divider)) }
+
     private fun refreshValues() {
         pollValue.text = if (LocalPrefs.powerSave) "каждые 60 сек" else "каждые 20 сек"
         refreshValue.text = if (LocalPrefs.powerSave) "только вручную" else "при каждом входе"
     }
 
-    private fun valueRow(label: String, valueView: TextView): LinearLayout =
+    private fun valueRow(labelText: String, valueView: TextView): LinearLayout =
         LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(12), dp(16), dp(12))
-            addView(Ui.text(this@PowerSaveActivity, label, 15f, R.color.textSecondary),
+            addView(Ui.text(this@PowerSaveActivity, labelText, 15f, R.color.textSecondary),
                 LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
             addView(valueView)
         }
 
-    private fun header(title: String): LinearLayout = LinearLayout(this).apply {
+    private fun headerView(title: String): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setBackgroundColor(color(R.color.bgSecondary))

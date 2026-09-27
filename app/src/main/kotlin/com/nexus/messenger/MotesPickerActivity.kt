@@ -1,7 +1,6 @@
 package com.nexus.messenger
 
 import android.app.Activity
-import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -56,7 +55,7 @@ class MotesPickerActivity : Activity() {
             columnCount = 3
             setPadding(dp(8), dp(8), dp(8), dp(24))
         }
-        scroll.addView(grid, ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        scroll.addView(grid, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         setContentView(root)
 
@@ -70,16 +69,25 @@ class MotesPickerActivity : Activity() {
             runOnUiThread {
                 grid.removeAllViews()
                 if (code != 200) {
-                    grid.addView(Ui.text(this, "Моты недоступны", 14f, R.color.textMuted),
-                        GridLayout.LayoutParams().apply { width = MATCH_PARENT; setMargins(dp(16), dp(24), dp(16), dp(16)) })
+                    val err = Ui.text(this, "Моты недоступны", 14f, R.color.textMuted)
+                    err.setPadding(dp(16), dp(24), dp(16), dp(16))
+                    grid.addView(err, GridLayout.LayoutParams().apply {
+                        width = MATCH_PARENT
+                        height = WRAP_CONTENT
+                    })
                     return@runOnUiThread
                 }
                 val arr = Api.parseArray(body)
                 if (arr.length() == 0) {
-                    grid.addView(Ui.text(this, "Галерея пуста — добавьте моты в разделе «Моты»", 14f, R.color.textMuted),
-                        GridLayout.LayoutParams().apply { width = MATCH_PARENT; setMargins(dp(16), dp(24), dp(16), dp(16)) })
+                    val empty = Ui.text(this, "Галерея пуста — добавьте моты в разделе «Моты»", 14f, R.color.textMuted)
+                    empty.setPadding(dp(16), dp(24), dp(16), dp(16))
+                    grid.addView(empty, GridLayout.LayoutParams().apply {
+                        width = MATCH_PARENT
+                        height = WRAP_CONTENT
+                    })
                     return@runOnUiThread
                 }
+                val cellSize = (resources.displayMetrics.widthPixels - dp(16)) / 3
                 for (i in 0 until arr.length()) {
                     val mote = Mote.fromJson(arr.getJSONObject(i))
                     val cell = FrameLayout(this)
@@ -87,10 +95,9 @@ class MotesPickerActivity : Activity() {
                     ImageLoader.load(this, mote.url, img)
                     cell.addView(img, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
                     cell.setOnClickListener { send(mote) }
-                    val size = (resources.displayMetrics.widthPixels - dp(16)) / 3
                     grid.addView(cell, GridLayout.LayoutParams().apply {
-                        width = size
-                        height = size
+                        width = cellSize
+                        height = cellSize
                         setMargins(dp(2), dp(2), dp(2), dp(2))
                     })
                 }

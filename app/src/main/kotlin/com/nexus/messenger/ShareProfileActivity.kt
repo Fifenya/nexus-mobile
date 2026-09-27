@@ -52,7 +52,6 @@ class ShareProfileActivity : Activity() {
         val username = Store.user?.username ?: "—"
         val link = "nexus://user/@$username"
 
-        // ── Белая карточка-визитка с QR ──
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -74,61 +73,62 @@ class ShareProfileActivity : Activity() {
                 LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
         }
 
-        card.addView(TextView(this).apply {
+        val nameTv = TextView(this).apply {
             text = "@$username"
             textSize = 18f
             paint.isFakeBoldText = true
             setTextColor(0xFF150809.toInt())
             gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(16) })
+        }
+        card.addView(nameTv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(16) })
 
-        card.addView(TextView(this).apply {
+        val dispTv = TextView(this).apply {
             text = Store.user?.displayName ?: username
             textSize = 13f
             setTextColor(0xFF6B5456.toInt())
             gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(2) })
+        }
+        card.addView(dispTv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(2) })
 
         root.addView(card, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
             leftMargin = dp(24); rightMargin = dp(24); topMargin = dp(28)
         })
 
-        root.addView(Ui.text(this, link, 12f, R.color.textMuted),
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                gravity = Gravity.CENTER
-                topMargin = dp(14)
-            })
+        val linkTv = Ui.text(this, link, 12f, R.color.textMuted)
+        linkTv.gravity = Gravity.CENTER
+        root.addView(linkTv, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(14) })
 
-        // ── Кнопки ──
         val btnRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(16), dp(18), dp(16), 0)
         }
-        btnRow.addView(actionBtn("Скопировать") {
+        val copyBtn = actionBtn("Скопировать") {
             val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             cm.setPrimaryClip(ClipData.newPlainText("nexus", "@$username\n$link"))
             Ui.snackbar(this, "Скопировано ✓")
-        }, LinearLayout.LayoutParams(0, dp(50), 1f).apply { rightMargin = dp(6) })
-        btnRow.addView(actionBtn("Поделиться") {
+        }
+        btnRow.addView(copyBtn, LinearLayout.LayoutParams(0, dp(50), 1f).apply { rightMargin = dp(6) })
+        val shareBtn = actionBtn("Поделиться") {
             val send = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, "Мой профиль в Nexus: @$username\n$link")
             }
             startActivity(Intent.createChooser(send, "Поделиться профилем"))
-        }, LinearLayout.LayoutParams(0, dp(50), 1f).apply { leftMargin = dp(6) })
+        }
+        btnRow.addView(shareBtn, LinearLayout.LayoutParams(0, dp(50), 1f).apply { leftMargin = dp(6) })
         root.addView(btnRow, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        root.addView(Ui.text(this, "Друг может отсканировать код камерой или ввести ссылку вручную в поиске контактов.", 12f, R.color.textMuted),
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                leftMargin = dp(24); rightMargin = dp(24); topMargin = dp(18)
-            })
+        val note = Ui.text(this, "Друг может отсканировать код камерой или ввести ссылку вручную в поиске контактов.", 12f, R.color.textMuted)
+        root.addView(note, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+            leftMargin = dp(24); rightMargin = dp(24); topMargin = dp(18)
+        })
 
         setContentView(root)
     }
 
     private fun color(res: Int): Int = resources.getColor(res, null)
 
-    private fun actionBtn(label: String, onClick: () -> Unit, lp: LinearLayout.LayoutParams): TextView =
+    private fun actionBtn(label: String, onClick: () -> Unit): TextView =
         TextView(this).apply {
             text = label
             textSize = 15f
@@ -138,9 +138,8 @@ class ShareProfileActivity : Activity() {
             background = Ui.pill(this@ShareProfileActivity, R.color.accent)
             elevation = dp(4).toFloat()
             setOnClickListener { onClick() }
-        }.also { it.layoutParams = lp }
+        }
 
-    /** Генерация QR локально, без сети */
     private fun generateQr(content: String, sizePx: Int): Bitmap? {
         return try {
             val hints = mapOf<EncodeHintType, Any>(

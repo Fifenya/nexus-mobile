@@ -26,14 +26,13 @@ import org.json.JSONObject
 import java.net.URLEncoder
 
 class MotesActivity : Activity() {
-    private lateinit var grid: GridLayout
-    private lateinit var search: EditText
-    private val motes = mutableListOf<Mote>()
-    private var pendingUploadUri: android.net.Uri? = null
-
     companion object {
         const val PICK_IMAGE = 4101
     }
+
+    private lateinit var grid: GridLayout
+    private lateinit var search: EditText
+    private val motes = mutableListOf<Mote>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,8 +80,11 @@ class MotesActivity : Activity() {
         })
 
         val scroll = ScrollView(this)
-        grid = GridLayout(this).apply { columnCount = 3 }
-        scroll.addView(grid, ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        grid = GridLayout(this).apply {
+            columnCount = 3
+            setPadding(dp(8), dp(8), dp(8), dp(24))
+        }
+        scroll.addView(grid, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
 
         frame.addView(root, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
@@ -91,7 +93,9 @@ class MotesActivity : Activity() {
         search.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) { load(s?.toString()?.trim() ?: "") }
+            override fun afterTextChanged(s: android.text.Editable?) {
+                load(s?.toString()?.trim() ?: "")
+            }
         })
 
         load("")
@@ -126,6 +130,7 @@ class MotesActivity : Activity() {
                     val nameInput = EditText(this).apply {
                         hint = "Название мота"
                         setTextColor(color(R.color.textPrimary))
+                        setHintTextColor(color(R.color.textMuted))
                         background = Ui.pill(this@MotesActivity, R.color.bgInput)
                         setPadding(dp(16), dp(14), dp(16), dp(14))
                     }
@@ -175,18 +180,18 @@ class MotesActivity : Activity() {
     private fun render() {
         grid.removeAllViews()
         if (motes.isEmpty()) {
-            grid.addView(Ui.text(this, "Мотов пока нет. Нажмите «+» чтобы загрузить первый.", 14f, R.color.textMuted),
-                GridLayout.LayoutParams().apply {
-                    width = MATCH_PARENT
-                    setMargins(dp(16), dp(40), dp(16), dp(16))
-                })
+            val empty = Ui.text(this, "Мотов пока нет. Нажмите «+» чтобы загрузить первый.", 14f, R.color.textMuted)
+            empty.setPadding(dp(16), dp(40), dp(16), dp(16))
+            grid.addView(empty, GridLayout.LayoutParams().apply {
+                width = MATCH_PARENT
+                height = WRAP_CONTENT
+            })
             return
         }
+        val cellSize = (resources.displayMetrics.widthPixels - dp(24)) / 3
         motes.forEach { mote ->
             val cell = FrameLayout(this)
-            val img = ImageView(this).apply {
-                scaleType = ImageView.ScaleType.CENTER_CROP
-            }
+            val img = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
             ImageLoader.load(this, mote.url, img)
             cell.addView(img, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
 
@@ -194,7 +199,7 @@ class MotesActivity : Activity() {
                 text = mote.name
                 textSize = 10f
                 setTextColor(0xFFFFFFFF.toInt())
-                setBackgroundColor(0x88000000)
+                setBackgroundColor(0x88000000.toInt())
                 setPadding(dp(6), dp(3), dp(6), dp(3))
                 maxLines = 1
             }
@@ -202,39 +207,36 @@ class MotesActivity : Activity() {
                 gravity = Gravity.BOTTOM or Gravity.START
             })
 
+            val mine = mote.ownerId == Store.user?.id
             cell.setOnLongClickListener {
-                val mine = mote.ownerId == Store.user?.id
-                val actions = if (mine) listOf("Удалить мот") else listOf("Мот не ваш")
-                NxDialog(this).items(actions) { i ->
-                    if (mine && i == 0) {
-                        NxDialog(this)
-                            .message("Удалить мот «${mote.name}»?")
-                            .button("Удалить") {
-                                Api.delete("/motes/gallery/${mote.id}") { c2, _ ->
-                                    runOnUiThread {
-                                        if (c2 in 200..299) {
-                                            Ui.snackbar(this, "Мот удалён")
-                                            load(search.text.toString().trim())
-                                        } else {
-                                            Ui.snackbar(this, "Не удалось удалить")
-                                        }
+                if (mine) {
+                    NxDialog(this)
+                        .message("Удалить мот «${mote.name}»?")
+                        .button("Удалить") {
+                            Api.delete("/motes/gallery/${mote.id}") { c2, _ ->
+                                runOnUiThread {
+                                    if (c2 in 200..299) {
+                                        Ui.snackbar(this, "Мот удалён")
+                                        load(search.text.toString().trim())
+                                    } else {
+                                        Ui.snackbar(this, "Не удалось удалить")
                                     }
                                 }
                             }
-                            .button("Отмена") {}
-                            .show()
-                    }
-                }.show()
+                        }
+                        .button("Отмена") {}
+                        .show()
+                } else {
+                    Ui.snackbar(this, "Мот не ваш — удалить нельзя")
+                }
                 true
             }
 
-            val size = (resources.displayMetrics.widthPixels - dp(24)) / 3
-            val params = GridLayout.LayoutParams().apply {
-                width = size
-                height = size
+            grid.addView(cell, GridLayout.LayoutParams().apply {
+                width = cellSize
+                height = cellSize
                 setMargins(dp(2), dp(2), dp(2), dp(2))
-            }
-            grid.addView(cell, params)
+            })
         }
     }
 }

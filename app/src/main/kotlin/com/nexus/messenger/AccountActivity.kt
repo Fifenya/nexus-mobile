@@ -10,7 +10,6 @@ import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -41,7 +40,6 @@ class AccountActivity : Activity() {
             setBackgroundColor(color(R.color.bgPrimary))
         }
 
-        // ── Шапка: назад + Аккаунт + сохранить ──
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -55,10 +53,8 @@ class AccountActivity : Activity() {
         }
         back.setOnClickListener { finish() }
         header.addView(back, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-        header.addView(
-            Ui.text(this, "Аккаунт", 20f, R.color.textPrimary, true),
-            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(8) }
-        )
+        header.addView(Ui.text(this, "Аккаунт", 20f, R.color.textPrimary, true),
+            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(8) })
         val save = ImageView(this).apply {
             setImageResource(R.drawable.ic_check)
             imageTintList = ColorStateList.valueOf(color(R.color.textPrimary))
@@ -74,67 +70,39 @@ class AccountActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(32))
         }
 
-        // ── Карточка: Ваше имя ──
+        // ── Ваше имя ──
         val nameCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Ui.card(this@AccountActivity)
         }
-        nameCard.addView(sectionLabel("Ваше имя"))
-        firstInput = EditText(this).apply {
-            hint = "Имя"
-            setHintTextColor(color(R.color.textMuted))
-            setTextColor(color(R.color.textPrimary))
-            background = null
-            setPadding(dp(16), dp(14), dp(16), dp(14))
-            textSize = 16f
-            maxLines = 1
-        }
+        val nameLabel = Ui.text(this, "Ваше имя", 13f, R.color.accentText, true)
+        nameLabel.setPadding(dp(16), dp(14), dp(16), dp(6))
+        nameCard.addView(nameLabel, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        firstInput = plainInput("Имя", false)
         nameCard.addView(firstInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-        nameCard.addView(divider(), LinearLayout.LayoutParams(MATCH_PARENT, 1).apply {
+        nameCard.addView(dividerView(), LinearLayout.LayoutParams(MATCH_PARENT, 1).apply {
             leftMargin = dp(16); rightMargin = dp(16)
         })
-        lastInput = EditText(this).apply {
-            hint = "Фамилия"
-            setHintTextColor(color(R.color.textMuted))
-            setTextColor(color(R.color.textPrimary))
-            background = null
-            setPadding(dp(16), dp(14), dp(16), dp(14))
-            textSize = 16f
-            maxLines = 1
-        }
+        lastInput = plainInput("Фамилия", false)
         nameCard.addView(lastInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         content.addView(nameCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // ── Карточка: О себе + счётчик ──
+        // ── О себе ──
         val bioCard = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             background = Ui.card(this@AccountActivity)
         }
-        bioInput = EditText(this).apply {
-            hint = "«О себе»"
-            setHintTextColor(color(R.color.textMuted))
-            setTextColor(color(R.color.textPrimary))
-            background = null
-            setPadding(dp(16), dp(16), dp(8), dp(16))
-            textSize = 16f
-            maxLines = 1
-            filters = arrayOf(InputFilter.LengthFilter(70))
-        }
+        bioInput = plainInput("«О себе»", false)
+        bioInput.filters = arrayOf(InputFilter.LengthFilter(70))
+        bioInput.setPadding(dp(16), dp(16), dp(8), dp(16))
         bioCard.addView(bioInput, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
         bioCounter = Ui.text(this, "70", 14f, R.color.textMuted)
-        bioCard.addView(bioCounter, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
-            rightMargin = dp(16)
-        })
-        content.addView(bioCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-            topMargin = dp(10)
-        })
-        content.addView(
-            Ui.text(this, "Напишите немного о себе.", 13f, R.color.textMuted),
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                topMargin = dp(10); leftMargin = dp(4); bottomMargin = dp(6)
-            }
-        )
+        bioCard.addView(bioCounter, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { rightMargin = dp(16) })
+        content.addView(bioCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) })
+        val bioHint = Ui.text(this, "Напишите немного о себе.", 13f, R.color.textMuted)
+        bioHint.setPadding(dp(4), dp(10), dp(4), dp(6))
+        content.addView(bioHint, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         bioInput.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
@@ -144,64 +112,51 @@ class AccountActivity : Activity() {
             }
         })
 
-        // ── Карточка: Информация о Вас ──
+        // ── Информация о Вас ──
         val infoCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Ui.card(this@AccountActivity)
         }
-        infoCard.addView(sectionLabel("Информация о Вас"))
+        val infoLabel = Ui.text(this, "Информация о Вас", 13f, R.color.accentText, true)
+        infoLabel.setPadding(dp(16), dp(14), dp(16), dp(6))
+        infoCard.addView(infoLabel, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         usernameTitle = Ui.text(this, "@${Store.user?.username ?: "—"}", 16f, R.color.textPrimary)
-        infoCard.addView(
-            rowView(tileText("@"), usernameTitle, "Имя пользователя") {
-                Ui.snackbar(this, "Имя пользователя изменить нельзя")
-            },
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-        )
-        infoCard.addView(dividerInset(), LinearLayout.LayoutParams(MATCH_PARENT, 1))
-        infoCard.addView(
-            rowView(Ui.tileIcon(this, R.drawable.ic_data, BLUE),
-                Ui.text(this, "Моя статистика", 16f, R.color.textPrimary),
-                "Сообщения, чаты, реакции") { showStats() },
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-        )
-        content.addView(infoCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-            topMargin = dp(10)
-        })
+        infoCard.addView(rowView(tileText("@"), usernameTitle, "Имя пользователя") {
+            Ui.snackbar(this, "Имя пользователя изменить нельзя")
+        }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        infoCard.addView(dividerView(), LinearLayout.LayoutParams(MATCH_PARENT, 1))
+        infoCard.addView(rowView(Ui.tileIcon(this, R.drawable.ic_data, BLUE),
+            Ui.text(this, "Моя статистика", 16f, R.color.textPrimary),
+            "Сообщения, чаты, реакции") { showStats() },
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        content.addView(infoCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) })
 
-        // ── Карточка: аккаунты и выход ──
+        // ── Аккаунты и выход ──
         val accCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Ui.card(this@AccountActivity)
         }
-        accCard.addView(
-            rowView(Ui.icon(this, R.drawable.ic_person_add, color(R.color.accentText)),
-                Ui.text(this, "Добавить аккаунт", 16f, R.color.accentText), null) {
-                Ui.snackbar(this, "Несколько аккаунтов появятся позже")
-            },
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-        )
-        accCard.addView(dividerInset(), LinearLayout.LayoutParams(MATCH_PARENT, 1))
-        accCard.addView(
-            rowView(Ui.icon(this, R.drawable.ic_logout, color(R.color.danger)),
-                Ui.text(this, "Выход", 16f, R.color.danger), null) {
-                NxDialog(this)
-                    .message("Выйти из аккаунта?")
-                    .button("Выйти") {
-                        Store.logout()
-                        startActivity(Intent(this, LoginActivity::class.java))
-                        finishAffinity()
-                    }
-                    .button("Отмена") {}
-                    .show()
-            },
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
-        )
-        content.addView(accCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-            topMargin = dp(10)
-        })
+        accCard.addView(rowView(Ui.icon(this, R.drawable.ic_person_add, color(R.color.accentText)),
+            Ui.text(this, "Добавить аккаунт", 16f, R.color.accentText), null) {
+            Ui.snackbar(this, "Несколько аккаунтов появятся позже")
+        }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        accCard.addView(dividerView(), LinearLayout.LayoutParams(MATCH_PARENT, 1))
+        accCard.addView(rowView(Ui.icon(this, R.drawable.ic_logout, color(R.color.danger)),
+            Ui.text(this, "Выход", 16f, R.color.danger), null) {
+            NxDialog(this)
+                .message("Выйти из аккаунта?")
+                .button("Выйти") {
+                    Store.logout()
+                    startActivity(Intent(this, LoginActivity::class.java))
+                    finishAffinity()
+                }
+                .button("Отмена") {}
+                .show()
+        }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        content.addView(accCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) })
 
-        scroll.addView(content)
+        scroll.addView(content, ScrollView.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         setContentView(root)
 
@@ -210,18 +165,19 @@ class AccountActivity : Activity() {
 
     private fun color(res: Int): Int = resources.getColor(res, null)
 
-    private fun divider() = View(this).apply { setBackgroundColor(color(R.color.divider)) }
+    private fun dividerView() = View(this).apply { setBackgroundColor(color(R.color.divider)) }
 
-    private fun dividerInset() = View(this).apply {
-        setBackgroundColor(color(R.color.divider))
-    }.also { it.setPadding(0, 0, 0, 0) }
+    private fun plainInput(hint: String, isPassword: Boolean): EditText = EditText(this).apply {
+        this.hint = hint
+        setHintTextColor(color(R.color.textMuted))
+        setTextColor(color(R.color.textPrimary))
+        background = null
+        setPadding(dp(16), dp(14), dp(16), dp(14))
+        textSize = 16f
+        maxLines = 1
+        if (isPassword) inputType = 0x00000081
+    }
 
-    private fun sectionLabel(s: String): TextView =
-        Ui.text(this, s, 13f, R.color.accentText, true).apply {
-            setPadding(dp(16), dp(14), dp(16), dp(6))
-        }
-
-    /** Плитка с текстом вместо иконки (для @) */
     private fun tileText(symbol: String): TextView = TextView(this).apply {
         text = symbol
         textSize = 18f
@@ -231,23 +187,21 @@ class AccountActivity : Activity() {
         background = Ui.tile(this@AccountActivity, ORANGE)
     }
 
-    private fun rowView(iconView: View, titleView: TextView, subtitle: String?, onClick: () -> Unit): View {
-        val v = LinearLayout(this).apply {
+    private fun rowView(iconView: View, titleView: TextView, subtitle: String?, onClick: () -> Unit): LinearLayout =
+        LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(10), dp(16), dp(10))
+            addView(iconView, LinearLayout.LayoutParams(dp(40), dp(40)))
+            val mid = LinearLayout(this@AccountActivity).apply { orientation = LinearLayout.VERTICAL }
+            mid.addView(titleView, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+            if (subtitle != null) {
+                mid.addView(Ui.text(this@AccountActivity, subtitle, 13f, R.color.textSecondary),
+                    LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(2) })
+            }
+            addView(mid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(16) })
+            setOnClickListener { onClick() }
         }
-        v.addView(iconView, LinearLayout.LayoutParams(dp(40), dp(40)))
-        val mid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        mid.addView(titleView, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-        if (subtitle != null) {
-            mid.addView(Ui.text(this, subtitle, 13f, R.color.textSecondary),
-                LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(2) })
-        }
-        v.addView(mid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(16) })
-        v.setOnClickListener { onClick() }
-        return v
-    }
 
     private fun load() {
         Api.get("/users/me") { code, body ->
@@ -260,8 +214,9 @@ class AccountActivity : Activity() {
                 val parts = (u.displayName ?: u.username).split(" ", limit = 2)
                 firstInput.setText(parts.getOrNull(0) ?: "")
                 lastInput.setText(parts.getOrNull(1) ?: "")
-                bioInput.setText(u.bio ?: "")
-                bioCounter.text = "${70 - (u.bio?.length ?: 0)}"
+                val bio = u.bio ?: ""
+                bioInput.setText(bio)
+                bioCounter.text = "${70 - bio.length}"
             }
         }
     }
@@ -303,9 +258,12 @@ class AccountActivity : Activity() {
                 val lines = mutableListOf<String>()
                 val keys = j.keys()
                 while (keys.hasNext()) {
-                    val k = keys.next()
-                    val v = j.opt(k)
-                    if (v is Number) lines.add("${names[k] ?: k}: $v")
+                    val k: String = keys.next().toString()
+                    val v: Any? = j.opt(k)
+                    if (v is Number) {
+                        val label: String = names[k] ?: k
+                        lines.add("$label: $v")
+                    }
                 }
                 if (lines.isEmpty()) lines.add("Пока нет данных")
                 NxDialog(this).title("Моя статистика").items(lines) {}.show()
