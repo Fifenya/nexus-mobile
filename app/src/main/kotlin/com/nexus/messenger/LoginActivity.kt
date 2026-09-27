@@ -129,9 +129,6 @@ class LoginActivity : Activity() {
             topMargin = dp(10)
         })
 
-        root.addView(Ui.text(this, "dev-доступ: testdevapp / testdevapp — тест-режим без сервера", 11f, R.color.textMuted),
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(14) })
-
         scroll.addView(root, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         frame.addView(scroll, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         setContentView(frame)
@@ -141,15 +138,6 @@ class LoginActivity : Activity() {
             val p = password.text.toString()
             if (u.isEmpty() || p.isEmpty()) {
                 Ui.snackbar(this, "Заполните все поля")
-                return@setOnClickListener
-            }
-
-            if (u == "testdevapp" && p == "testdevapp") {
-                Store.testMode = true
-                Store.token = "mock-token"
-                Store.user = User("test-user", "testdevapp", "Test Dev", bio = "Локальный тестовый профиль")
-                startActivity(Intent(this, ChatsActivity::class.java))
-                finish()
                 return@setOnClickListener
             }
 
