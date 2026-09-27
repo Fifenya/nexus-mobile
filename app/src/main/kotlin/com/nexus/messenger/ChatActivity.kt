@@ -117,7 +117,7 @@ class ChatActivity : Activity() {
         0xFFA695E7.toInt(), 0xFFEE7AAE.toInt(), 0xFF6EC9CB.toInt(), 0xFFFAA774.toInt()
     )
 
-    private val quickEmojis = listOf("❤️", "👍", "", "⭐", "😭", "")
+    private val quickEmojis = listOf("❤️", "👍", "🔥", "⭐", "😭", "🤝")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -276,7 +276,7 @@ class ChatActivity : Activity() {
                             val img = ImageView(context).apply {
                                 scaleType = ImageView.ScaleType.CENTER_CROP
                                 background = GradientDrawable().apply {
-                                    setColor(0x33000000)
+                                    setColor(0x33000000.toInt())
                                     cornerRadius = dp(10).toFloat()
                                 }
                             }
@@ -493,7 +493,6 @@ class ChatActivity : Activity() {
 
     private fun color(res: Int): Int = resources.getColor(res, null)
 
-    /** Видео-блок как в Telegram: рамка, длительность в углу, play по центру, свой проигрыватель */
     private fun videoBlock(context: Context, att: Attachment): View {
         val frame = FrameLayout(context).apply {
             background = GradientDrawable().apply {
@@ -511,7 +510,7 @@ class ChatActivity : Activity() {
             text = att.duration?.let { fmtDur(it) } ?: "…"
             textSize = 11f
             setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0x99000000)
+            setBackgroundColor(0x99000000.toInt())
             setPadding(dp(8), dp(3), dp(8), dp(3))
         }
         frame.addView(dur, FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
@@ -522,7 +521,7 @@ class ChatActivity : Activity() {
         val play = ImageView(context).apply {
             setImageResource(R.drawable.ic_play)
             imageTintList = ColorStateList.valueOf(0xFFFFFFFF.toInt())
-            background = Ui.pillColor(context, 0x99000000)
+            background = Ui.pillColor(context, 0x99000000.toInt())
             setPadding(dp(12), dp(12), dp(12), dp(12))
         }
         frame.addView(play, FrameLayout.LayoutParams(dp(52), dp(52)).apply { gravity = Gravity.CENTER })
