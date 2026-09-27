@@ -12,34 +12,49 @@ import java.net.URL
 object ImageLoader {
     private val cache = LruCache<String, Bitmap>(64)
 
-    fun load(@Suppress("UNUSED_PARAMETER") ctx: android.content.Context, url: String, into: ImageView, placeholderColor: Int = 0xFF201012.toInt()) {
+    fun load(
+        ctx: android.content.Context,
+        url: String,
+        into: ImageView,
+        placeholderColor: Int = 0xFF201012.toInt()
+    ) {
         into.setBackgroundColor(placeholderColor)
         into.setImageDrawable(null)
-        cache.get(url)?.let { into.setImageBitmap(it); return }
 
-        if (url.startsWith("mock://")) {
-            val bmp = mockBitmap(url)
-            cache.put(url, bmp)
+        val fullUrl = resolveUrl(url)
+        cache.get(fullUrl)?.let { into.setImageBitmap(it); return }
+
+        if (fullUrl.startsWith("mock://")) {
+            val bmp = mockBitmap(fullUrl)
+            cache.put(fullUrl, bmp)
             into.setImageBitmap(bmp)
             return
         }
 
-        val full = if (url.startsWith("http")) url else Store.apiBase + url
         Thread {
             try {
-                val conn = URL(full).openConnection() as HttpURLConnection
+                val conn = URL(fullUrl).openConnection() as HttpURLConnection
                 conn.connectTimeout = 10000
                 conn.readTimeout = 15000
+                val token = Store.token
+                if (!token.isNullOrEmpty()) {
+                    conn.setRequestProperty("Authorization", "Bearer $token")
+                }
                 if (conn.responseCode == 200) {
                     val bmp = BitmapFactory.decodeStream(conn.inputStream)
                     if (bmp != null) {
-                        cache.put(url, bmp)
+                        cache.put(fullUrl, bmp)
                         into.post { into.setImageBitmap(bmp) }
                     }
                 }
             } catch (_: Exception) {
             }
         }.start()
+    }
+
+    fun resolveUrl(url: String): String {
+        if (url.startsWith("http") || url.startsWith("mock://")) return url
+        return Store.apiBase + url
     }
 
     private fun mockBitmap(url: String): Bitmap {
@@ -57,7 +72,7 @@ object ImageLoader {
             textSize = 140f
             textAlign = Paint.Align.CENTER
         }
-        c.drawText("★", size / 2f, size / 2f + 48f, p)
+        c.drawText("*", size / 2f, size / 2f + 48f, p)
         return bmp
     }
 }

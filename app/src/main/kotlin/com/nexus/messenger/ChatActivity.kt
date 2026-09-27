@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -16,13 +15,10 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.ArrayAdapter
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
-import android.widget.MediaController
 import android.widget.TextView
-import android.widget.VideoView
 import com.nexus.messenger.data.Api
 import com.nexus.messenger.data.Attachment
 import com.nexus.messenger.data.Cache
@@ -37,6 +33,7 @@ import com.nexus.messenger.data.Store
 import com.nexus.messenger.data.User
 import com.nexus.messenger.ui.NxDialog
 import com.nexus.messenger.ui.Ui
+import com.nexus.messenger.ui.VideoPlayer
 import com.nexus.messenger.ui.Wallpaper
 import com.nexus.messenger.ui.dp
 import org.json.JSONArray
@@ -136,7 +133,7 @@ class ChatActivity : Activity() {
             setPadding(dp(4), dp(8), dp(8), dp(8))
         }
         val back = ImageView(this).apply {
-            setImageResource(R.drawable.ic_back)
+            setImageResource(R.drawable.ic_arrow_back)
             imageTintList = ColorStateList.valueOf(color(R.color.accentText))
             setPadding(dp(12), dp(10), dp(12), dp(10))
         }
@@ -248,6 +245,7 @@ class ChatActivity : Activity() {
                             floatArrayOf(r, r, r, r, r, r, t, t)
                     }
                     setPadding(dp(12), dp(8), dp(12), dp(6))
+                    clipToOutline = true
                 }
 
                 if (!isOwn && isGroup && LocalPrefs.chatShowNames) {
@@ -494,68 +492,10 @@ class ChatActivity : Activity() {
     private fun color(res: Int): Int = resources.getColor(res, null)
 
     private fun videoBlock(context: Context, att: Attachment): View {
-        val frame = FrameLayout(context).apply {
-            background = GradientDrawable().apply {
-                setColor(0xFF000000.toInt())
-                cornerRadius = dp(12).toFloat()
-                setStroke(dp(2), context.resources.getColor(R.color.accentText, null))
-            }
-        }
-        val url = if (att.url.startsWith("http")) att.url else Store.apiBase + att.url
-
-        val vv = VideoView(context)
-        frame.addView(vv, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-
-        val dur = TextView(context).apply {
-            text = att.duration?.let { fmtDur(it) } ?: "…"
-            textSize = 11f
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0x99000000.toInt())
-            setPadding(dp(8), dp(3), dp(8), dp(3))
-        }
-        frame.addView(dur, FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
-            gravity = Gravity.TOP or Gravity.START
-            setMargins(dp(8), dp(8), dp(8), dp(8))
-        })
-
-        val play = ImageView(context).apply {
-            setImageResource(R.drawable.ic_play)
-            imageTintList = ColorStateList.valueOf(0xFFFFFFFF.toInt())
-            background = Ui.pillColor(context, 0x99000000.toInt())
-            setPadding(dp(12), dp(12), dp(12), dp(12))
-        }
-        frame.addView(play, FrameLayout.LayoutParams(dp(52), dp(52)).apply { gravity = Gravity.CENTER })
-
-        val mc = MediaController(context)
-        mc.setAnchorView(frame)
-        vv.setMediaController(mc)
-        vv.setVideoURI(Uri.parse(url))
-        vv.setOnPreparedListener { mp ->
-            mp.start()
-            mp.pause()
-            dur.text = fmtDur(mp.duration / 1000)
-        }
-        vv.setOnCompletionListener {
-            play.visibility = View.VISIBLE
-            vv.seekTo(0)
-        }
-        vv.setOnErrorListener { _, _, _ ->
-            dur.text = "ошибка"
-            play.visibility = View.GONE
-            true
-        }
-        play.setOnClickListener {
-            play.visibility = View.GONE
-            vv.start()
-            mc.show(0)
-        }
-        return frame
-    }
-
-    private fun fmtDur(totalSec: Int): String {
-        val m = totalSec / 60
-        val s = totalSec % 60
-        return String.format(Locale.US, "%d:%02d", m, s)
+        val url = if (att.url.startsWith("http") || att.url.startsWith("mock://")) att.url else Store.apiBase + att.url
+        val player = VideoPlayer(context)
+        player.setVideoUrl(url)
+        return player
     }
 
     private fun applyPresence(status: String, hidden: Boolean) {
