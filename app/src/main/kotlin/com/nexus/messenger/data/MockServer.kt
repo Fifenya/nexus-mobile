@@ -87,14 +87,14 @@ object MockServer {
 
     private fun mJson(m: M): JSONObject {
         val attArray = JSONArray()
-        m.attachments.forEach { url ->
+        for (url in m.attachments) {
             val attObj = JSONObject()
             attObj.put("type", "image")
             attObj.put("url", url)
             attArray.put(attObj)
         }
         val viewsArray = JSONArray()
-        m.views.forEach { uid ->
+        for (uid in m.views) {
             val userObj = JSONObject()
             userObj.put("id", uid)
             userObj.put("username", BOT_NAME)
@@ -147,8 +147,8 @@ object MockServer {
 
     fun handle(method: String, path: String, body: JSONObject?, onResult: (Int, String) -> Unit) {
         exec.schedule({
-            val (code, text) = route(method, path, body)
-            onResult(code, text)
+            val result = route(method, path, body)
+            onResult(result.first, result.second)
         }, 80, TimeUnit.MILLISECONDS)
     }
 
@@ -159,14 +159,15 @@ object MockServer {
                 arr.put(chatJson("mock-echo", "Эхо-чат", "PRIVATE"))
                 arr.put(chatJson("mock-team", "Команда Nexus", "GROUP"))
                 arr.put(chatJson("mock-news", "Nexus News", "GROUP"))
-                200 to arr.toString()
+                Pair(200, arr.toString())
             }
 
             method == "GET" && path.startsWith("/chats/") && path.endsWith("/messages") -> {
                 val id = path.removePrefix("/chats/").removeSuffix("/messages")
                 val arr = JSONArray()
-                (chats[id] ?: mutableListOf()).forEach { arr.put(mJson(it)) }
-                200 to arr.toString()
+                val list = chats[id] ?: mutableListOf()
+                for (m in list) arr.put(mJson(m))
+                Pair(200, arr.toString())
             }
 
             method == "POST" && path.startsWith("/chats/") && path.endsWith("/messages") -> {
@@ -177,7 +178,7 @@ object MockServer {
                 if (attArr != null) {
                     for (i in 0 until attArr.length()) {
                         val u = attArr.optJSONObject(i)?.optString("url")
-                        if (!u.isNullOrEmpty()) atts.add(u)
+                        if (u != null && u.isNotEmpty()) atts.add(u)
                     }
                 }
                 val list = chats.getOrPut(id) { mutableListOf() }
@@ -192,40 +193,46 @@ object MockServer {
                         "📡 echo-server: принято «${text}» · status=200 · latency=${latency}ms · msgId=${mine.id}"
                     list.add(M(nextId(), echoText, BOT_ID, BOT_NAME, System.currentTimeMillis() + 1))
                 }
-                201 to mJson(mine).toString()
+                Pair(201, mJson(mine).toString())
             }
 
             method == "POST" && path == "/view" ->
-                200 to "{\"ok\":true}"
+                Pair(200, "{\"ok\":true}")
 
             method == "PATCH" && path.startsWith("/messages/") -> {
                 val id = path.removePrefix("/messages/")
                 var edited: M? = null
-                chats.values.forEach { list ->
-                    list.firstOrNull { it.id == id }?.let {
-                        it.text = body?.optString("text") ?: it.text
-                        edited = it
+                for (list in chats.values) {
+                    for (m in list) {
+                        if (m.id == id) {
+                            m.text = body?.optString("text") ?: m.text
+                            edited = m
+                            break
+                        }
                     }
+                    if (edited != null) break
                 }
-                edited?.let { 200 to mJson(it).toString() }
-                    ?: 404 to "{\"statusCode\":404,\"message\":\"Mock: message not found\"}"
+                if (edited != null) Pair(200, mJson(edited).toString())
+                else Pair(404, "{\"statusCode\":404,\"message\":\"Mock: message not found\"}")
             }
 
             method == "DELETE" && path.startsWith("/messages/") -> {
                 val id = path.removePrefix("/messages/")
-                chats.values.forEach { list -> list.removeAll { it.id == id } }
-                200 to "{\"ok\":true}"
+                for (list in chats.values) {
+                    list.removeAll { it.id == id }
+                }
+                Pair(200, "{\"ok\":true}")
             }
 
             method == "POST" && path.matches(Regex("/messages/[^/]+/reactions")) ->
-                200 to "{\"ok\":true}"
+                Pair(200, "{\"ok\":true}")
 
             method == "GET" && path.startsWith("/motes/gallery") -> {
                 val q = path.substringAfter("search=", "").substringBefore("&").lowercase()
                 val filtered = if (q.isEmpty()) motes else motes.filter { it.name.lowercase().contains(q) }
                 val arr = JSONArray()
-                filtered.forEach { arr.put(moteJson(it)) }
-                200 to arr.toString()
+                for (mote in filtered) arr.put(moteJson(mote))
+                Pair(200, arr.toString())
             }
 
             method == "POST" && path == "/motes/gallery" -> {
@@ -233,22 +240,23 @@ object MockServer {
                 val url = body?.optString("url") ?: "mock://mote/$counter"
                 val m = MoteM("mote-${++counter}", name, url, MY_ID)
                 motes.add(0, m)
-                201 to moteJson(m).toString()
+                Pair(201, moteJson(m).toString())
             }
 
             method == "DELETE" && path.startsWith("/motes/gallery/") -> {
                 val id = path.removePrefix("/motes/gallery/")
                 motes.removeAll { it.id == id }
-                200 to "{\"ok\":true}"
+                Pair(200, "{\"ok\":true}")
             }
 
             method == "GET" && path.matches(Regex("/chats/[^/]+/members")) -> {
-                val id = path.removePrefix("/chats/").removeSuffix("/members")
+                val chatId = path.removePrefix("/chats/").removeSuffix("/members")
                 val arr = JSONArray()
-                (members[id] ?: mutableListOf()).forEach { m ->
-                    val uid = m["id"] ?: ""
-                    val uname = m["username"] ?: ""
-                    val urole = m["role"] ?: ""
+                val memberList = members[chatId] ?: mutableListOf()
+                for (m in memberList) {
+                    val uid: String = m["id"] ?: ""
+                    val uname: String = m["username"] ?: ""
+                    val urole: String = m["role"] ?: ""
                     val userObj = JSONObject()
                     userObj.put("id", uid)
                     userObj.put("username", uname)
@@ -258,37 +266,48 @@ object MockServer {
                     rowObj.put("user", userObj)
                     arr.put(rowObj)
                 }
-                200 to arr.toString()
+                Pair(200, arr.toString())
             }
 
             method == "POST" && path.matches(Regex("/chats/[^/]+/members")) -> {
-                val id = path.removePrefix("/chats/").removeSuffix("/members")
+                val chatId = path.removePrefix("/chats/").removeSuffix("/members")
                 val ids = body?.optJSONArray("userIds") ?: JSONArray()
-                val list = members.getOrPut(id) { mutableListOf() }
+                val list = members.getOrPut(chatId) { mutableListOf() }
                 for (i in 0 until ids.length()) {
                     val uid = ids.optString(i)
-                    if (uid.isNotEmpty() && list.none { it["id"] == uid }) {
-                        list.add(mapOf("id" to uid, "username" to uid, "role" to "MEMBER"))
+                    if (uid.isNotEmpty()) {
+                        val exists = list.any { it["id"] == uid }
+                        if (!exists) {
+                            list.add(mapOf("id" to uid, "username" to uid, "role" to "MEMBER"))
+                        }
                     }
                 }
-                200 to "{\"added\":${ids.length()}}"
+                Pair(200, "{\"added\":${ids.length()}}")
             }
 
             method == "DELETE" && path.matches(Regex("/chats/[^/]+/members/[^/]+")) -> {
                 val parts = path.removePrefix("/chats/").split("/members/")
-                members[parts[0]]?.removeAll { it["id"] == parts[1] }
-                200 to "{\"ok\":true}"
+                val chatId = parts[0]
+                val userId = parts[1]
+                val list = members[chatId]
+                if (list != null) {
+                    list.removeAll { it["id"] == userId }
+                }
+                Pair(200, "{\"ok\":true}")
             }
 
             method == "POST" && path.matches(Regex("/chats/[^/]+/leave")) -> {
-                val id = path.removePrefix("/chats/").removeSuffix("/leave")
-                members[id]?.removeAll { it["id"] == MY_ID }
-                200 to "{\"ok\":true}"
+                val chatId = path.removePrefix("/chats/").removeSuffix("/leave")
+                val list = members[chatId]
+                if (list != null) {
+                    list.removeAll { it["id"] == MY_ID }
+                }
+                Pair(200, "{\"ok\":true}")
             }
 
             method == "GET" && path.matches(Regex("/chats/[^/]+/settings")) -> {
-                val id = path.removePrefix("/chats/").removeSuffix("/settings")
-                val cur = chatSettings[id] ?: run {
+                val chatId = path.removePrefix("/chats/").removeSuffix("/settings")
+                val cur = chatSettings[chatId] ?: run {
                     val perms = JSONObject()
                     perms.put("sendMessages", "all")
                     perms.put("inviteUsers", "all")
@@ -299,70 +318,79 @@ object MockServer {
                     obj.put("permissions", perms)
                     obj
                 }
-                200 to cur.toString()
+                Pair(200, cur.toString())
             }
 
             method == "PATCH" && path.matches(Regex("/chats/[^/]+/settings")) -> {
-                val id = path.removePrefix("/chats/").removeSuffix("/settings")
-                val cur = chatSettings.getOrPut(id) { JSONObject() }
-                body?.keys()?.forEach { k -> cur.put(k, body.opt(k)) }
-                200 to cur.toString()
+                val chatId = path.removePrefix("/chats/").removeSuffix("/settings")
+                val cur = chatSettings.getOrPut(chatId) { JSONObject() }
+                val keys = body?.keys()
+                if (keys != null) {
+                    while (keys.hasNext()) {
+                        val k = keys.next()
+                        cur.put(k, body.opt(k))
+                    }
+                }
+                Pair(200, cur.toString())
             }
 
             method == "PATCH" && path.matches(Regex("/chats/[^/]+$")) -> {
                 val out = JSONObject()
                 out.put("id", path.removePrefix("/chats/"))
                 out.put("title", body?.optString("title") ?: "")
-                200 to out.toString()
+                Pair(200, out.toString())
             }
 
             method == "GET" && path.matches(Regex("/chats/[^/]+/invites")) -> {
-                val id = path.removePrefix("/chats/").removeSuffix("/invites")
+                val chatId = path.removePrefix("/chats/").removeSuffix("/invites")
                 val arr = JSONArray()
-                invites.filter { it.chatId == id }.forEach { inv ->
-                    val creator = JSONObject()
-                    creator.put("username", MY_NAME)
-                    val rowObj = JSONObject()
-                    rowObj.put("id", inv.id)
-                    rowObj.put("code", inv.code)
-                    rowObj.put("uses", inv.uses)
-                    rowObj.put("creator", creator)
-                    arr.put(rowObj)
+                for (inv in invites) {
+                    if (inv.chatId == chatId) {
+                        val creator = JSONObject()
+                        creator.put("username", MY_NAME)
+                        val rowObj = JSONObject()
+                        rowObj.put("id", inv.id)
+                        rowObj.put("code", inv.code)
+                        rowObj.put("uses", inv.uses)
+                        rowObj.put("creator", creator)
+                        arr.put(rowObj)
+                    }
                 }
-                200 to arr.toString()
+                Pair(200, arr.toString())
             }
 
             method == "POST" && path.matches(Regex("/chats/[^/]+/invites")) -> {
-                val id = path.removePrefix("/chats/").removeSuffix("/invites")
-                val inv = Invite(nextInviteId(), "mock-${(1000..9999).random()}", id)
+                val chatId = path.removePrefix("/chats/").removeSuffix("/invites")
+                val inv = Invite(nextInviteId(), "mock-${(1000..9999).random()}", chatId)
                 invites.add(inv)
                 val out = JSONObject()
                 out.put("id", inv.id)
                 out.put("code", inv.code)
                 out.put("uses", 0)
-                200 to out.toString()
+                Pair(200, out.toString())
             }
 
             method == "DELETE" && path.matches(Regex("/chats/[^/]+/invites/[^/]+")) -> {
                 val parts = path.removePrefix("/chats/").split("/invites/")
-                invites.removeAll { it.id == parts[1] }
-                200 to "{\"ok\":true}"
+                val invId = parts[1]
+                invites.removeAll { it.id == invId }
+                Pair(200, "{\"ok\":true}")
             }
 
             method == "POST" && path.matches(Regex("/chats/invites/[^/]+/join")) ->
-                200 to "{\"ok\":true}"
+                Pair(200, "{\"ok\":true}")
 
             method == "POST" && path == "/auth/forgot" -> {
                 val out = JSONObject()
                 out.put("ok", true)
                 out.put("message", "Тест-режим: код 123456 «отправлен» в Моты")
-                200 to out.toString()
+                Pair(200, out.toString())
             }
 
             method == "POST" && path == "/auth/reset" -> {
                 val code = body?.optString("code") ?: ""
-                if (code == "123456") 200 to "{\"ok\":true,\"message\":\"Пароль изменён (тест)\"}"
-                else 400 to "{\"statusCode\":400,\"message\":\"Неверный код\"}"
+                if (code == "123456") Pair(200, "{\"ok\":true,\"message\":\"Пароль изменён (тест)\"}")
+                else Pair(400, "{\"statusCode\":400,\"message\":\"Неверный код\"}")
             }
 
             method == "GET" && path == "/users/search" -> {
@@ -377,20 +405,20 @@ object MockServer {
                 d.put("username", "Dave")
                 d.put("displayName", "Dave")
                 arr.put(d)
-                200 to arr.toString()
+                Pair(200, arr.toString())
             }
 
             method == "GET" && path == "/users/me" ->
-                200 to userJson(MY_ID, MY_NAME, "online")
+                Pair(200, userJson(MY_ID, MY_NAME, "online"))
 
             method == "PATCH" && path == "/users/me" ->
-                200 to userJson(MY_ID, body?.optString("displayName") ?: MY_NAME, "online")
+                Pair(200, userJson(MY_ID, body?.optString("displayName") ?: MY_NAME, "online"))
 
             method == "GET" && path.startsWith("/users/") ->
-                200 to userJson(BOT_ID, BOT_NAME, "online")
+                Pair(200, userJson(BOT_ID, BOT_NAME, "online"))
 
             else ->
-                404 to "{\"statusCode\":404,\"message\":\"Mock: no route for $method $path\"}"
+                Pair(404, "{\"statusCode\":404,\"message\":\"Mock: no route for $method $path\"}")
         }
     }
 
