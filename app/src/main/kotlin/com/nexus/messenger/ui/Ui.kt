@@ -14,15 +14,16 @@ import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import com.nexus.messenger.R
+import com.nexus.messenger.data.Theme
 
 object Ui {
     fun card(ctx: Context): GradientDrawable = GradientDrawable().apply {
-        setColor(ctx.resources.getColor(R.color.bgSecondary, null))
+        setColor(Theme.color(ctx, R.color.bgSecondary))
         cornerRadius = dp(16).toFloat()
     }
 
     fun pill(ctx: Context, colorRes: Int): GradientDrawable = GradientDrawable().apply {
-        setColor(ctx.resources.getColor(colorRes, null))
+        setColor(Theme.color(ctx, colorRes))
         cornerRadius = dp(999).toFloat()
     }
 
@@ -57,7 +58,7 @@ object Ui {
         TextView(ctx).apply {
             text = s
             textSize = sizeSp
-            setTextColor(ctx.resources.getColor(colorRes, null))
+            setTextColor(Theme.color(ctx, colorRes))
             if (bold) paint.isFakeBoldText = true
         }
 
@@ -66,24 +67,23 @@ object Ui {
         trackTintList = ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
             intArrayOf(
-                ctx.resources.getColor(R.color.accent, null),
-                ctx.resources.getColor(R.color.bgTertiary, null)
+                Theme.color(ctx, R.color.accent),
+                Theme.color(ctx, R.color.bgTertiary)
             )
         )
         thumbTintList = ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-            intArrayOf(0xFFFFFFFF.toInt(), ctx.resources.getColor(R.color.textMuted, null))
+            intArrayOf(0xFFFFFFFF.toInt(), Theme.color(ctx, R.color.textMuted))
         )
         setOnCheckedChangeListener { _, c -> onChange(c) }
     }
 
-    /** Кастомный снекбар вместо системного Toast */
     fun snackbar(activity: Activity, text: String) {
         val content = activity.findViewById<FrameLayout>(android.R.id.content)
         val tv = TextView(activity).apply {
             this.text = text
             textSize = 14f
-            setTextColor(activity.resources.getColor(R.color.textPrimary, null))
+            setTextColor(Theme.color(activity, R.color.textPrimary))
             background = pill(activity, R.color.bgTertiary)
             setPadding(dp(18), dp(12), dp(18), dp(12))
             elevation = dp(10).toFloat()
@@ -103,7 +103,6 @@ object Ui {
     }
 }
 
-/** Кастомный диалог в стиле Nexus (вместо системных AlertDialog) */
 class NxDialog(private val ctx: Context) {
     private val card = LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
@@ -111,7 +110,6 @@ class NxDialog(private val ctx: Context) {
         setPadding(dp(20), dp(18), dp(20), dp(10))
     }
     private val buttons = mutableListOf<Pair<String, () -> Unit>>()
-    private var itemsView: LinearLayout? = null
     private var dialog: Dialog? = null
 
     fun title(s: String): NxDialog {
@@ -155,11 +153,10 @@ class NxDialog(private val ctx: Context) {
             ))
             if (i < list.size - 1) {
                 wrap.addView(View(ctx).apply {
-                    setBackgroundColor(ctx.resources.getColor(R.color.divider, null))
+                    setBackgroundColor(Theme.color(ctx, R.color.divider))
                 }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1))
             }
         }
-        itemsView = wrap
         card.addView(wrap, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT

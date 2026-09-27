@@ -14,13 +14,31 @@
         <activity android:name=".MainActivity" android:exported="true" />
         <activity android:name=".LoginActivity" />
         <activity android:name=".RegisterActivity" />
+        <activity android:name=".ForgotActivity" />
         <activity android:name=".ChatsActivity" />
+        <activity android:name=".ContactsActivity" />
+        <activity android:name=".CreateGroupActivity" />
+        <activity android:name=".GroupInfoActivity" />
+        <activity android:name=".GroupSettingsActivity" />
+        <activity android:name=".InviteActivity" />
         <activity android:name=".ChatActivity" />
+        <activity android:name=".MotesActivity" />
+        <activity android:name=".MotesPickerActivity" />
         <activity android:name=".SettingsActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".AccountActivity" />
+        <activity android:name=".ShareProfileActivity" />
         <activity android:name=".BotsActivity" />
         <activity android:name=".IconPickerActivity" />
+        <activity android:name=".ChatSettingsActivity" />
+        <activity android:name=".NotificationsActivity" />
+        <activity android:name=".DataStorageActivity" />
+        <activity android:name=".DevicesActivity" />
+        <activity android:name=".LanguageActivity" />
+        <activity android:name=".PrivacySettingsActivity" />
+        <activity android:name=".FoldersActivity" />
+        <activity android:name=".ThemesActivity" />
+        <activity android:name=".PowerSaveActivity" />
 
         <activity-alias
             android:name=".MainActivityClassic"

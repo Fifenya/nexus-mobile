@@ -90,12 +90,37 @@ class ProfileActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             background = Ui.card(this@ProfileActivity)
         }
-        card.addView(infoRow("Имя пользователя", "@${Store.user?.username ?: "—"}"),
+
+        val userRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+        }
+        val userMid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        userMid.addView(Ui.text(this, "Имя пользователя", 12f, R.color.textMuted),
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        userMid.addView(Ui.text(this, "@${Store.user?.username ?: "—"}", 16f, R.color.textPrimary),
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(4) })
+        userRow.addView(userMid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        userRow.addView(Ui.icon(this, R.drawable.ic_grid, color(R.color.accentText)),
+            LinearLayout.LayoutParams(dp(24), dp(24)))
+        userRow.setOnClickListener {
+            startActivity(Intent(this, ShareProfileActivity::class.java))
+        }
+        card.addView(userRow, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
         card.addView(View(this).apply { setBackgroundColor(color(R.color.divider)) },
             LinearLayout.LayoutParams(MATCH_PARENT, 1).apply { leftMargin = dp(16) })
-        card.addView(infoRowView("О себе", bioValue),
+
+        val bioRow = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+        }
+        bioRow.addView(Ui.text(this, "О себе", 12f, R.color.textMuted),
             LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        bioRow.addView(bioValue, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(4) })
+        card.addView(bioRow, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
         content.addView(card, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12) })
 
         scroll.addView(content)
@@ -125,20 +150,6 @@ class ProfileActivity : Activity() {
         v.addView(Ui.text(this, label, 12f, R.color.textPrimary),
             LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(8) })
         v.setOnClickListener { onClick() }
-        return v
-    }
-
-    private fun infoRow(label: String, value: String): View =
-        infoRowView(label, Ui.text(this, value, 16f, R.color.textPrimary))
-
-    private fun infoRowView(label: String, valueView: TextView): View {
-        val v = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
-        }
-        v.addView(Ui.text(this, label, 12f, R.color.textMuted),
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-        v.addView(valueView, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(4) })
         return v
     }
 

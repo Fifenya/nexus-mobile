@@ -29,5 +29,6 @@ android {
 }
 
 dependencies {
-    // Пусто — только Android SDK
+    implementation 'com.google.zxing:core:3.5.3',
+    implementation 'io.socket:socket.io-client:2.1.1'
 }

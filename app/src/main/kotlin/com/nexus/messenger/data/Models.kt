@@ -8,6 +8,34 @@ private fun str(j: JSONObject, key: String): String? {
     return if (v.isEmpty() || v == "null") null else v
 }
 
+data class Reaction(
+    val emoji: String,
+    val userId: String
+)
+
+data class Attachment(
+    val type: String,
+    val url: String
+)
+
+data class Mote(
+    val id: String,
+    val name: String,
+    val url: String,
+    val tags: String,
+    val ownerId: String
+) {
+    companion object {
+        fun fromJson(j: JSONObject) = Mote(
+            str(j, "id") ?: "",
+            str(j, "name") ?: "Мот",
+            str(j, "url") ?: "",
+            str(j, "tags") ?: "",
+            str(j, "ownerId") ?: ""
+        )
+    }
+}
+
 data class User(
     val id: String,
     val username: String,
@@ -69,16 +97,16 @@ data class Message(
     val replyToId: String? = null,
     val replyText: String? = null,
     val replyAuthor: String? = null,
-    val viewIds: List<String> = emptyList()
+    val viewIds: List<String> = emptyList(),
+    val reactions: List<Reaction> = emptyList(),
+    val attachments: List<Attachment> = emptyList()
 ) {
     companion object {
         fun fromJson(j: JSONObject): Message {
-            // Бэкенд возвращает "sender", но поддерживаем и "author" для совместимости
             val senderObj = j.optJSONObject("sender")
                 ?: j.optJSONObject("author")
                 ?: JSONObject()
 
-            // Если sender это просто строка (id) — берём его
             val senderId = if (senderObj.length() == 0) {
                 str(j, "senderId") ?: str(j, "authorId") ?: ""
             } else {
@@ -91,6 +119,7 @@ data class Message(
             }
 
             val reply = j.optJSONObject("replyTo")
+
             val viewsArr = j.optJSONArray("views")
             val views = mutableListOf<String>()
             if (viewsArr != null) {
@@ -101,6 +130,32 @@ data class Message(
                     if (uid.isNotEmpty() && uid != "null") views.add(uid)
                 }
             }
+
+            val reactionsArr = j.optJSONArray("reactions")
+            val reactions = mutableListOf<Reaction>()
+            if (reactionsArr != null) {
+                for (i in 0 until reactionsArr.length()) {
+                    val r = reactionsArr.optJSONObject(i) ?: continue
+                    val emoji = r.optString("emoji")
+                    val uid = r.optJSONObject("user")?.optString("id")
+                        ?: r.optString("userId")
+                        ?: ""
+                    if (emoji.isNotEmpty() && emoji != "null") {
+                        reactions.add(Reaction(emoji, uid))
+                    }
+                }
+            }
+
+            val attArr = j.optJSONArray("attachments")
+            val attachments = mutableListOf<Attachment>()
+            if (attArr != null) {
+                for (i in 0 until attArr.length()) {
+                    val a = attArr.optJSONObject(i) ?: continue
+                    val url = str(a, "url") ?: continue
+                    attachments.add(Attachment(str(a, "type") ?: "image", url))
+                }
+            }
+
             return Message(
                 str(j, "id") ?: "",
                 str(j, "text") ?: "",
@@ -111,7 +166,9 @@ data class Message(
                 reply?.let { str(it, "id") },
                 reply?.let { str(it, "text") },
                 reply?.let { str(it, "author") },
-                views
+                views,
+                reactions,
+                attachments
             )
         }
     }

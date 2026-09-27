@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.nexus.messenger.data.Store
+import com.nexus.messenger.data.Theme
 import com.nexus.messenger.ui.BottomNav
 import com.nexus.messenger.ui.NxDialog
 import com.nexus.messenger.ui.Ui
@@ -91,16 +92,23 @@ class SettingsActivity : Activity() {
             row(R.drawable.ic_chat, ORANGE, "Настройки чатов", "Обои, ночной режим, анимации", onClick = {
                 startActivity(Intent(this, ChatSettingsActivity::class.java))
             }),
-            row(R.drawable.ic_key, GREEN, "Конфиденциальность", "Время захода, устройства, ключи", onClick = soon),
+            row(R.drawable.ic_key, GREEN, "Конфиденциальность", "Время захода, устройства, ключи", onClick = {
+                startActivity(Intent(this, PrivacySettingsActivity::class.java))
+            }),
             row(R.drawable.ic_bell, PINK, "Уведомления", "Звуки, звонки, счётчик сообщений", onClick = {
                 startActivity(Intent(this, NotificationsActivity::class.java))
             }),
             row(R.drawable.ic_data, INDIGO, "Данные и память", "Настройки загрузки медиафайлов", onClick = {
                 startActivity(Intent(this, DataStorageActivity::class.java))
             }),
-            row(R.drawable.ic_folder, CYAN, "Папки с чатами", "Сортировка чатов по папкам", onClick = soon),
+            row(R.drawable.ic_folder, CYAN, "Папки с чатами", "Сортировка чатов по папкам", onClick = {
+                startActivity(Intent(this, FoldersActivity::class.java))
+            }),
             row(R.drawable.ic_device, CYAN, "Устройства", "Управление активными сеансами", onClick = {
                 startActivity(Intent(this, DevicesActivity::class.java))
+            }),
+            row(R.drawable.ic_battery, ORANGE, "Энергосбережение", "Экономия энергии при низком заряде", onClick = {
+                startActivity(Intent(this, PowerSaveActivity::class.java))
             }),
             row(R.drawable.ic_globe, PURPLE, "Язык", "Русский", onClick = {
                 startActivity(Intent(this, LanguageActivity::class.java))
@@ -111,8 +119,12 @@ class SettingsActivity : Activity() {
             row(R.drawable.ic_bot, ORANGE, "Боты", "Создание и управление ботами", onClick = {
                 startActivity(Intent(this, BotsActivity::class.java))
             }),
-            row(R.drawable.ic_star, PURPLE, "Мотесы", "Галерея мотесов", onClick = soon),
-            row(R.drawable.ic_palette, PINK, "Темы оформления", "Цветовые темы интерфейса", onClick = soon),
+            row(R.drawable.ic_star, PURPLE, "Моты", "Галерея мотов", onClick = {
+                startActivity(Intent(this, MotesActivity::class.java))
+            }),
+            row(R.drawable.ic_palette, PINK, "Темы оформления", "Цветовые темы интерфейса", onClick = {
+                startActivity(Intent(this, ThemesActivity::class.java))
+            }),
             row(R.drawable.ic_grid, INDIGO, "Иконка приложения", "Смена иконки в лаунчере", onClick = {
                 startActivity(Intent(this, IconPickerActivity::class.java))
             }, trailing = ImageView(this).apply {
@@ -150,7 +162,7 @@ class SettingsActivity : Activity() {
         setContentView(frame)
     }
 
-    private fun color(res: Int): Int = resources.getColor(res, null)
+    private fun color(res: Int): Int = Theme.color(this, res)
 
     private fun row(
         iconRes: Int,

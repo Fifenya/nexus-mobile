@@ -1,9 +1,14 @@
 package com.nexus.messenger
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +17,7 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
@@ -19,6 +25,12 @@ import android.widget.TextView
 import com.nexus.messenger.data.Api
 import com.nexus.messenger.data.Cache
 import com.nexus.messenger.data.Chat
+import com.nexus.messenger.data.ChatFolder
+import com.nexus.messenger.data.FoldersStore
+import com.nexus.messenger.data.LocalPrefs
+import com.nexus.messenger.data.Notify
+import com.nexus.messenger.data.RealtimeClient
+import com.nexus.messenger.data.RtMessage
 import com.nexus.messenger.data.Store
 import com.nexus.messenger.ui.BottomNav
 import com.nexus.messenger.ui.NxDialog
@@ -32,8 +44,47 @@ import java.util.Locale
 class ChatsActivity : Activity() {
     private lateinit var listView: ListView
     private lateinit var emptyText: TextView
+    private lateinit var chipsBar: LinearLayout
+    private lateinit var titleTv: TextView
     private val chats = mutableListOf<Chat>()
+    private val allChatsList = mutableListOf<Chat>()
     private lateinit var chatAdapter: ArrayAdapter<Chat>
+    private var currentFolder: ChatFolder? = null
+
+    private val dotsHandler = Handler(Looper.getMainLooper())
+    private var dotsCount = 0
+    private val dotsTask = object : Runnable {
+        override fun run() {
+            if (RealtimeClient.state != RealtimeClient.STATE_ONLINE) {
+                dotsCount = (dotsCount + 1) % 4
+                titleTv.text = "Подключение" + ".".repeat(dotsCount)
+            }
+            dotsHandler.postDelayed(this, 450)
+        }
+    }
+
+    private val stateListener: (String) -> Unit = { s ->
+        runOnUiThread {
+            when (s) {
+                RealtimeClient.STATE_ONLINE -> {
+                    titleTv.text = if (Store.testMode) "Nexus · ТЕСТ" else "Nexus"
+                    loadChats(true)
+                }
+                RealtimeClient.STATE_OFFLINE -> titleTv.text = "Nexus · офлайн"
+                else -> Unit
+            }
+        }
+    }
+
+    private val msgListener: (RtMessage) -> Unit = { m ->
+        runOnUiThread {
+            if (m.senderId != Store.user?.id) {
+                loadChats(true)
+                val title = m.chatTitle ?: m.senderName
+                Notify.message(this, title, m.text.ifEmpty { "📎 Вложение" }, m.chatId, m.chatTitle)
+            }
+        }
+    }
 
     private val avatarColors = intArrayOf(
         0xFFE17076.toInt(), 0xFF7BC862.toInt(), 0xFF65AADD.toInt(),
@@ -42,6 +93,12 @@ class ChatsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 77)
+        }
 
         val frame = FrameLayout(this)
         frame.setBackgroundColor(color(R.color.bgPrimary))
@@ -62,10 +119,9 @@ class ChatsActivity : Activity() {
             background = Ui.tile(this@ChatsActivity, color(R.color.accent))
         }
         header.addView(logo, LinearLayout.LayoutParams(dp(36), dp(36)))
-        header.addView(
-            Ui.text(this, if (Store.testMode) "Nexus · ТЕСТ" else "Nexus", 22f, R.color.textPrimary, true),
-            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(12) }
-        )
+        titleTv = Ui.text(this, if (Store.testMode) "Nexus · ТЕСТ" else "Nexus", 22f, R.color.textPrimary, true)
+        header.addView(titleTv,
+            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(12) })
         val dots = ImageView(this).apply {
             setImageResource(R.drawable.ic_dots)
             imageTintList = ColorStateList.valueOf(color(R.color.textSecondary))
@@ -92,9 +148,18 @@ class ChatsActivity : Activity() {
             leftMargin = dp(12); rightMargin = dp(12); bottomMargin = dp(6)
         })
 
+        val chipsScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
+        chipsBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(dp(12), 0, dp(12), dp(8))
+        }
+        chipsScroll.addView(chipsBar, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+        root.addView(chipsScroll, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
         chatAdapter = object : ArrayAdapter<Chat>(this@ChatsActivity, 0, chats) {
             override fun getView(pos: Int, cv: View?, parent: ViewGroup): View {
                 val chat = getItem(pos)!!
+                val muted = LocalPrefs.isMuted(this@ChatsActivity, chat.id)
                 val row = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -121,6 +186,12 @@ class ChatsActivity : Activity() {
                     Ui.text(context, chat.title ?: "Чат", 16f, R.color.textPrimary, true),
                     LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
                 )
+                if (muted) {
+                    line1.addView(ImageView(context).apply {
+                        setImageResource(R.drawable.ic_bell_off)
+                        imageTintList = ColorStateList.valueOf(color(R.color.textMuted))
+                    }, LinearLayout.LayoutParams(dp(14), dp(14)).apply { leftMargin = dp(6) })
+                }
                 line1.addView(Ui.text(context, formatTime(chat.lastMessageAt), 12f,
                     if (chat.unreadCount > 0) R.color.accentText else R.color.textMuted))
                 mid.addView(line1)
@@ -198,10 +269,27 @@ class ChatsActivity : Activity() {
 
         listView.setOnItemLongClickListener { _, _, pos, _ ->
             val chat = chatAdapter.getItem(pos) ?: return@setOnItemLongClickListener true
+            val muted = LocalPrefs.isMuted(this, chat.id)
             NxDialog(this).title(chat.title ?: "Чат")
-                .items(listOf(if (chat.pinned) "Открепить" else "Закрепить")) { i ->
-                    val path = if (i == 0 && chat.pinned) "/chats/${chat.id}/unpin" else "/chats/${chat.id}/pin"
-                    Api.post(path, JSONObject()) { _, _ -> loadChats() }
+                .items(listOf(
+                    if (chat.pinned) "Открепить" else "Закрепить",
+                    if (muted) "Включить звук" else "Без звука",
+                    "Информация"
+                )) { i ->
+                    when (i) {
+                        0 -> {
+                            val path = if (chat.pinned) "/chats/${chat.id}/unpin" else "/chats/${chat.id}/pin"
+                            Api.post(path, JSONObject()) { _, _ -> loadChats(true) }
+                        }
+                        1 -> {
+                            LocalPrefs.setMuted(this, chat.id, !muted)
+                            runOnUiThread { chatAdapter.notifyDataSetChanged() }
+                            Ui.snackbar(this, if (muted) "Звук включён" else "Чат без звука")
+                        }
+                        2 -> startActivity(Intent(this, GroupInfoActivity::class.java)
+                            .putExtra("chatId", chat.id)
+                            .putExtra("title", chat.title))
+                    }
                 }.show()
             true
         }
@@ -211,20 +299,73 @@ class ChatsActivity : Activity() {
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) { chatAdapter.filter.filter(s) }
         })
+
+        RealtimeClient.retain(this)
+        RealtimeClient.addStateListener(stateListener)
+        RealtimeClient.addMessageListener(msgListener)
+        stateListener(RealtimeClient.state)
+        dotsHandler.post(dotsTask)
     }
 
     override fun onResume() {
         super.onResume()
-        loadChats()
+        buildChips()
+        loadChats(false)
+    }
+
+    override fun onDestroy() {
+        dotsHandler.removeCallbacks(dotsTask)
+        RealtimeClient.removeStateListener(stateListener)
+        RealtimeClient.removeMessageListener(msgListener)
+        RealtimeClient.release()
+        super.onDestroy()
     }
 
     private fun color(res: Int): Int = resources.getColor(res, null)
 
+    private fun buildChips() {
+        chipsBar.removeAllViews()
+        addChip("Все", null)
+        FoldersStore.all(this).forEach { f -> addChip(f.name, f) }
+    }
+
+    private fun addChip(label: String, folder: ChatFolder?) {
+        val selected = (folder == null && currentFolder == null) || (folder != null && currentFolder?.id == folder.id)
+        val chip = TextView(this).apply {
+            text = label
+            textSize = 13f
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+            setTextColor(color(if (selected) R.color.textPrimary else R.color.textSecondary))
+            paint.isFakeBoldText = selected
+            background = Ui.pill(this@ChatsActivity, if (selected) R.color.accent else R.color.bgSecondary)
+        }
+        chip.setOnClickListener {
+            currentFolder = folder
+            buildChips()
+            applyFilter()
+        }
+        chipsBar.addView(chip, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+            rightMargin = dp(8)
+        })
+    }
+
+    private fun applyFilter() {
+        chats.clear()
+        val src = if (currentFolder == null) allChatsList
+        else allChatsList.filter { c -> currentFolder!!.chatIds.contains(c.id) }
+        chats.addAll(src.sortedByDescending { it.pinned })
+        chatAdapter.notifyDataSetChanged()
+        emptyText.text = if (currentFolder != null) "В папке пусто" else "Нет чатов"
+        emptyText.visibility = if (chats.isEmpty()) View.VISIBLE else View.GONE
+        listView.visibility = if (chats.isEmpty()) View.GONE else View.VISIBLE
+    }
+
     private fun showMenu() {
-        NxDialog(this).items(listOf("Обновить", "Адрес сервера")) { i ->
+        NxDialog(this).items(listOf("Обновить", "Создать группу", "Адрес сервера")) { i ->
             when (i) {
-                0 -> loadChats()
-                1 -> showServerDialog()
+                0 -> loadChats(true)
+                1 -> startActivity(Intent(this, CreateGroupActivity::class.java))
+                2 -> showServerDialog()
             }
         }.show()
     }
@@ -248,8 +389,9 @@ class ChatsActivity : Activity() {
             .show()
     }
 
-    private fun loadChats() {
+    private fun loadChats(force: Boolean) {
         Cache.get(this, "chats")?.let { raw -> renderChats(raw) }
+        if (LocalPrefs.powerSave && !force) return
         Api.get("/chats") { code, body ->
             runOnUiThread {
                 if (code == 200) {
@@ -263,15 +405,10 @@ class ChatsActivity : Activity() {
     }
 
     private fun renderChats(body: String) {
-        chats.clear()
+        allChatsList.clear()
         val arr = Api.parseArray(body)
-        val temp = mutableListOf<Chat>()
-        for (i in 0 until arr.length()) temp.add(Chat.fromJson(arr.getJSONObject(i)))
-        temp.sortWith(compareByDescending<Chat> { it.pinned })
-        chats.addAll(temp)
-        chatAdapter.notifyDataSetChanged()
-        emptyText.visibility = if (chats.isEmpty()) View.VISIBLE else View.GONE
-        listView.visibility = if (chats.isEmpty()) View.GONE else View.VISIBLE
+        for (i in 0 until arr.length()) allChatsList.add(Chat.fromJson(arr.getJSONObject(i)))
+        applyFilter()
     }
 
     private fun createChat() {
@@ -289,7 +426,7 @@ class ChatsActivity : Activity() {
                 val title = input.text.toString().trim()
                 Api.post("/chats", JSONObject().put("title", title).put("userIds", JSONArray())) { code, _ ->
                     runOnUiThread {
-                        if (code in 200..299) loadChats()
+                        if (code in 200..299) loadChats(true)
                         else Ui.snackbar(this, "Не удалось создать чат")
                     }
                 }
@@ -304,10 +441,10 @@ class ChatsActivity : Activity() {
             val date = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(s) ?: return ""
             val diff = (System.currentTimeMillis() - date.time) / 86400000L
             when {
-                diff == 0L -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
+                diff == 0L -> SimpleDateFormat("HH:mm", LocalPrefs.formatLocale()).format(date)
                 diff == 1L -> "Вчера"
-                diff < 7 -> SimpleDateFormat("EEE", Locale("ru")).format(date)
-                else -> SimpleDateFormat("dd.MM", Locale.getDefault()).format(date)
+                diff < 7 -> SimpleDateFormat("EEE", LocalPrefs.formatLocale()).format(date)
+                else -> SimpleDateFormat("dd.MM", LocalPrefs.formatLocale()).format(date)
             }
         } catch (e: Exception) { "" }
     }

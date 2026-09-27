@@ -100,10 +100,20 @@ class LoginActivity : Activity() {
             textSize = 14f
             gravity = Gravity.CENTER
             setTextColor(color(R.color.accentText))
-            setPadding(dp(16), dp(18), dp(16), dp(8))
+            setPadding(dp(16), dp(14), dp(16), dp(6))
         }
         reg.setOnClickListener { startActivity(Intent(this@LoginActivity, RegisterActivity::class.java)) }
         root.addView(reg, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+
+        val forgot = TextView(this).apply {
+            text = "Забыли пароль?"
+            textSize = 13f
+            gravity = Gravity.CENTER
+            setTextColor(color(R.color.textMuted))
+            setPadding(dp(16), dp(6), dp(16), dp(8))
+        }
+        forgot.setOnClickListener { startActivity(Intent(this@LoginActivity, ForgotActivity::class.java)) }
+        root.addView(forgot, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
 
         val serverLink = TextView(this).apply {
             text = "🌐 " + Store.apiBase

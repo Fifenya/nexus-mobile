@@ -9,9 +9,12 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.nexus.messenger.ChatsActivity
+import com.nexus.messenger.ContactsActivity
 import com.nexus.messenger.R
 import com.nexus.messenger.SettingsActivity
 import com.nexus.messenger.ProfileActivity
+import com.nexus.messenger.data.Store
+import com.nexus.messenger.data.Theme
 
 object BottomNav {
     fun attach(frame: FrameLayout, activity: Activity, current: String) {
@@ -24,8 +27,9 @@ object BottomNav {
             gravity = Gravity.CENTER_VERTICAL
         }
         tab(bar, activity, "chats", "Чаты", R.drawable.ic_chat, current)
+        tab(bar, activity, "contacts", "Контакты", R.drawable.ic_person, current)
         tab(bar, activity, "settings", "Настройки", R.drawable.ic_gear, current)
-        tab(bar, activity, "profile", "Профиль", R.drawable.ic_person, current)
+        profileTab(bar, activity, current)
 
         val lp = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
@@ -49,24 +53,20 @@ object BottomNav {
         val iv = ImageView(ctx).apply {
             setImageResource(iconRes)
             imageTintList = ColorStateList.valueOf(
-                ctx.resources.getColor(if (active) R.color.accentText else R.color.textSecondary, null)
+                Theme.color(ctx, if (active) R.color.accentText else R.color.textSecondary)
             )
         }
         v.addView(iv, LinearLayout.LayoutParams(dp(22), dp(22)))
-        val tv = TextView(ctx).apply {
-            text = label
-            textSize = 11f
-            gravity = Gravity.CENTER
-            setTextColor(ctx.resources.getColor(if (active) R.color.accentText else R.color.textSecondary, null))
-        }
-        v.addView(tv, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = dp(2) })
+        v.addView(tabLabel(ctx, label, active),
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(2) })
         v.setOnClickListener {
             if (!active) {
                 val cls = when (id) {
                     "chats" -> ChatsActivity::class.java
+                    "contacts" -> ContactsActivity::class.java
                     "settings" -> SettingsActivity::class.java
                     else -> ProfileActivity::class.java
                 }
@@ -77,4 +77,46 @@ object BottomNav {
         }
         bar.addView(v, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
     }
+
+    private fun profileTab(bar: LinearLayout, activity: Activity, current: String) {
+        val ctx = activity
+        val active = current == "profile"
+        val v = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(4), dp(8), dp(4), dp(8))
+            if (active) background = Ui.pill(ctx, R.color.bgTertiary)
+        }
+        val letter = (Store.user?.username ?: "?").take(1).uppercase()
+        val av = TextView(ctx).apply {
+            text = letter
+            textSize = 11f
+            gravity = Gravity.CENTER
+            setTextColor(0xFFFFFFFF.toInt())
+            paint.isFakeBoldText = true
+            background = Ui.tileCircle(ctx, 0xFF65AADD.toInt())
+        }
+        v.addView(av, LinearLayout.LayoutParams(dp(22), dp(22)))
+        v.addView(tabLabel(ctx, "Профиль", active),
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(2) })
+        v.setOnClickListener {
+            if (!active) {
+                activity.startActivity(Intent(activity, ProfileActivity::class.java))
+                activity.finish()
+                activity.overridePendingTransition(0, 0)
+            }
+        }
+        bar.addView(v, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+    }
+
+    private fun tabLabel(ctx: Activity, label: String, active: Boolean): TextView =
+        TextView(ctx).apply {
+            text = label
+            textSize = 11f
+            gravity = Gravity.CENTER
+            setTextColor(Theme.color(ctx, if (active) R.color.accentText else R.color.textSecondary))
+        }
 }
