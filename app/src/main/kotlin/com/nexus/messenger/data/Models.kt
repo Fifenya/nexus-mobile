@@ -15,7 +15,10 @@ data class Reaction(
 
 data class Attachment(
     val type: String,
-    val url: String
+    val url: String,
+    val duration: Int? = null,
+    val size: Int? = null,
+    val mimeType: String? = null
 )
 
 data class Mote(
@@ -152,7 +155,13 @@ data class Message(
                 for (i in 0 until attArr.length()) {
                     val a = attArr.optJSONObject(i) ?: continue
                     val url = str(a, "url") ?: continue
-                    attachments.add(Attachment(str(a, "type") ?: "image", url))
+                    attachments.add(Attachment(
+                        type = str(a, "type") ?: "image",
+                        url = url,
+                        duration = if (a.isNull("duration")) null else a.optInt("duration"),
+                        size = if (a.isNull("size")) null else a.optInt("size"),
+                        mimeType = str(a, "mimeType")
+                    ))
                 }
             }
 

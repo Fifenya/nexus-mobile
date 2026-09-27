@@ -1,9 +1,11 @@
 package com.nexus.messenger
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -14,11 +16,15 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
+import android.widget.MediaController
 import android.widget.TextView
+import android.widget.VideoView
 import com.nexus.messenger.data.Api
+import com.nexus.messenger.data.Attachment
 import com.nexus.messenger.data.Cache
 import com.nexus.messenger.data.ImageLoader
 import com.nexus.messenger.data.LocalPrefs
@@ -111,7 +117,7 @@ class ChatActivity : Activity() {
         0xFFA695E7.toInt(), 0xFFEE7AAE.toInt(), 0xFF6EC9CB.toInt(), 0xFFFAA774.toInt()
     )
 
-    private val quickEmojis = listOf("❤️", "👍", "🔥", "⭐", "😭", "🤝")
+    private val quickEmojis = listOf("❤️", "👍", "", "⭐", "😭", "")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -207,15 +213,29 @@ class ChatActivity : Activity() {
             override fun getView(pos: Int, cv: View?, parent: ViewGroup): View {
                 val msg = getItem(pos)!!
                 val isOwn = msg.authorId == Store.user?.id
+
                 val wrap = LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(dp(40), dp(3), dp(40), dp(3))
-                    gravity = if (isOwn) Gravity.END else Gravity.START
-                }
-                val bubbleRow = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
+                    setPadding(dp(12), dp(3), dp(12), dp(3))
                     gravity = if (isOwn) Gravity.END else Gravity.START
                 }
+
+                if (!isOwn && isGroup) {
+                    val memberAvatar = TextView(context).apply {
+                        text = msg.authorName.take(1).uppercase()
+                        textSize = 13f
+                        gravity = Gravity.CENTER
+                        setTextColor(0xFFFFFFFF.toInt())
+                        paint.isFakeBoldText = true
+                        background = Ui.tileCircle(context,
+                            avatarColors[Math.abs(msg.authorId.hashCode()) % avatarColors.size])
+                    }
+                    wrap.addView(memberAvatar, LinearLayout.LayoutParams(dp(32), dp(32)).apply {
+                        gravity = Gravity.BOTTOM
+                        rightMargin = dp(6)
+                    })
+                }
+
                 val r = dp(LocalPrefs.chatRadius).toFloat()
                 val t = dp(4).toFloat()
                 val bubble = LinearLayout(context).apply {
@@ -251,19 +271,26 @@ class ChatActivity : Activity() {
                 }
 
                 msg.attachments.forEach { att ->
-                    if (att.type == "image" || att.type == "mote") {
-                        val img = ImageView(context).apply {
-                            scaleType = ImageView.ScaleType.CENTER_CROP
-                            background = GradientDrawable().apply {
-                                setColor(0x33000000)
-                                cornerRadius = dp(10).toFloat()
+                    when (att.type) {
+                        "image", "mote" -> {
+                            val img = ImageView(context).apply {
+                                scaleType = ImageView.ScaleType.CENTER_CROP
+                                background = GradientDrawable().apply {
+                                    setColor(0x33000000)
+                                    cornerRadius = dp(10).toFloat()
+                                }
                             }
+                            ImageLoader.load(context, att.url, img)
+                            bubble.addView(img, LinearLayout.LayoutParams(dp(200), dp(200)).apply { bottomMargin = dp(4) })
                         }
-                        ImageLoader.load(context, att.url, img)
-                        bubble.addView(img, LinearLayout.LayoutParams(dp(200), dp(200)).apply { bottomMargin = dp(4) })
-                    } else {
-                        bubble.addView(Ui.text(context, "📎 ${att.type}", 14f, R.color.textSecondary),
-                            LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+                        "video" -> {
+                            bubble.addView(videoBlock(context, att),
+                                LinearLayout.LayoutParams(dp(220), dp(280)).apply { bottomMargin = dp(4) })
+                        }
+                        else -> {
+                            bubble.addView(Ui.text(context, "📎 ${att.type}", 14f, R.color.textSecondary),
+                                LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+                        }
                     }
                 }
 
@@ -275,12 +302,41 @@ class ChatActivity : Activity() {
                         LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
                 }
 
+                if (msg.reactions.isNotEmpty()) {
+                    val grouped = LinkedHashMap<String, MutableList<String>>()
+                    msg.reactions.forEach { rx ->
+                        grouped.getOrPut(rx.emoji) { mutableListOf() }.add(rx.userId)
+                    }
+                    val chipsRow = LinearLayout(context).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = if (isOwn) Gravity.END else Gravity.START
+                    }
+                    grouped.forEach { (emoji, userIds) ->
+                        val mine = userIds.contains(Store.user?.id)
+                        val chip = TextView(context).apply {
+                            text = "$emoji ${userIds.size}"
+                            textSize = 12f
+                            setPadding(dp(10), dp(4), dp(10), dp(4))
+                            setTextColor(if (mine) 0xFF150809.toInt() else 0xFFFFFFFF.toInt())
+                            background = Ui.pillColor(context, if (mine) 0x99FFFFFF.toInt() else 0x33FFFFFF.toInt())
+                        }
+                        chip.setOnClickListener { react(msg, emoji) }
+                        chipsRow.addView(chip, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+                            rightMargin = dp(6)
+                        })
+                    }
+                    bubble.addView(chipsRow, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+                        topMargin = dp(4)
+                    })
+                }
+
+                val edited = msg.updatedAt != null && msg.updatedAt != msg.createdAt
                 val meta = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.END or Gravity.CENTER_VERTICAL
                 }
                 val metaColor = if (isOwn) 0xB3FFFFFF.toInt() else color(R.color.textMuted)
-                if (msg.updatedAt != null) {
+                if (edited) {
                     meta.addView(TextView(context).apply {
                         text = "изм. "
                         textSize = 10f
@@ -300,40 +356,12 @@ class ChatActivity : Activity() {
                         imageTintList = ColorStateList.valueOf(metaColor)
                     }, LinearLayout.LayoutParams(dp(14), dp(14)).apply { leftMargin = dp(4) })
                 }
-                bubble.addView(meta, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(2) })
+                bubble.addView(meta, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+                    topMargin = dp(2)
+                    gravity = Gravity.END
+                })
 
-                bubbleRow.addView(bubble, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-                wrap.addView(bubbleRow, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-
-                if (msg.reactions.isNotEmpty()) {
-                    val grouped = LinkedHashMap<String, MutableList<String>>()
-                    msg.reactions.forEach { rx ->
-                        grouped.getOrPut(rx.emoji) { mutableListOf() }.add(rx.userId)
-                    }
-                    val chipsRow = LinearLayout(context).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = if (isOwn) Gravity.END else Gravity.START
-                    }
-                    grouped.forEach { (emoji, userIds) ->
-                        val mine = userIds.contains(Store.user?.id)
-                        val chip = TextView(context).apply {
-                            text = "$emoji ${userIds.size}"
-                            textSize = 12f
-                            setPadding(dp(10), dp(4), dp(10), dp(4))
-                            setTextColor(color(if (mine) R.color.textPrimary else R.color.textSecondary))
-                            background = Ui.pillColor(context,
-                                if (mine) color(R.color.accent) else color(R.color.bgTertiary))
-                        }
-                        chip.setOnClickListener { react(msg, emoji) }
-                        chipsRow.addView(chip, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
-                            rightMargin = dp(6)
-                        })
-                    }
-                    wrap.addView(chipsRow, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                        topMargin = dp(2)
-                    })
-                }
-
+                wrap.addView(bubble, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
                 return wrap
             }
         }
@@ -464,6 +492,72 @@ class ChatActivity : Activity() {
     }
 
     private fun color(res: Int): Int = resources.getColor(res, null)
+
+    /** Видео-блок как в Telegram: рамка, длительность в углу, play по центру, свой проигрыватель */
+    private fun videoBlock(context: Context, att: Attachment): View {
+        val frame = FrameLayout(context).apply {
+            background = GradientDrawable().apply {
+                setColor(0xFF000000.toInt())
+                cornerRadius = dp(12).toFloat()
+                setStroke(dp(2), context.resources.getColor(R.color.accentText, null))
+            }
+        }
+        val url = if (att.url.startsWith("http")) att.url else Store.apiBase + att.url
+
+        val vv = VideoView(context)
+        frame.addView(vv, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+
+        val dur = TextView(context).apply {
+            text = att.duration?.let { fmtDur(it) } ?: "…"
+            textSize = 11f
+            setTextColor(0xFFFFFFFF.toInt())
+            setBackgroundColor(0x99000000)
+            setPadding(dp(8), dp(3), dp(8), dp(3))
+        }
+        frame.addView(dur, FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+            gravity = Gravity.TOP or Gravity.START
+            setMargins(dp(8), dp(8), dp(8), dp(8))
+        })
+
+        val play = ImageView(context).apply {
+            setImageResource(R.drawable.ic_play)
+            imageTintList = ColorStateList.valueOf(0xFFFFFFFF.toInt())
+            background = Ui.pillColor(context, 0x99000000)
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+        }
+        frame.addView(play, FrameLayout.LayoutParams(dp(52), dp(52)).apply { gravity = Gravity.CENTER })
+
+        val mc = MediaController(context)
+        mc.setAnchorView(frame)
+        vv.setMediaController(mc)
+        vv.setVideoURI(Uri.parse(url))
+        vv.setOnPreparedListener { mp ->
+            mp.start()
+            mp.pause()
+            dur.text = fmtDur(mp.duration / 1000)
+        }
+        vv.setOnCompletionListener {
+            play.visibility = View.VISIBLE
+            vv.seekTo(0)
+        }
+        vv.setOnErrorListener { _, _, _ ->
+            dur.text = "ошибка"
+            play.visibility = View.GONE
+            true
+        }
+        play.setOnClickListener {
+            play.visibility = View.GONE
+            vv.start()
+            mc.show(0)
+        }
+        return frame
+    }
+
+    private fun fmtDur(totalSec: Int): String {
+        val m = totalSec / 60
+        val s = totalSec % 60
+        return String.format(Locale.US, "%d:%02d", m, s)
+    }
 
     private fun applyPresence(status: String, hidden: Boolean) {
         if (System.currentTimeMillis() < typingUntil) return
