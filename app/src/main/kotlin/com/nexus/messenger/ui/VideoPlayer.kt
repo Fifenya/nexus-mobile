@@ -55,15 +55,7 @@ class VideoPlayer(context: Context) : FrameLayout(context) {
             gravity = Gravity.CENTER
         }
 
-        playBtn = roundButton(R.drawable.ic_play)
-        playBtn.setOnClickListener {
-            videoView.start()
-            isPlaying = true
-            playBtn.visibility = View.GONE
-            pauseBtn.visibility = View.VISIBLE
-            handler.post(updateProgress)
-        }
-
+        // 1. Сначала инициализируем pauseBtn, чтобы playBtn мог на него ссылаться
         pauseBtn = roundButton(R.drawable.ic_pause)
         pauseBtn.visibility = View.GONE
         pauseBtn.setOnClickListener {
@@ -72,6 +64,16 @@ class VideoPlayer(context: Context) : FrameLayout(context) {
             pauseBtn.visibility = View.GONE
             playBtn.visibility = View.VISIBLE
             handler.removeCallbacks(updateProgress)
+        }
+
+        // 2. Затем инициализируем playBtn
+        playBtn = roundButton(R.drawable.ic_play)
+        playBtn.setOnClickListener {
+            videoView.start()
+            isPlaying = true
+            playBtn.visibility = View.GONE
+            pauseBtn.visibility = View.VISIBLE
+            handler.post(updateProgress)
         }
 
         btnRow.addView(playBtn, LinearLayout.LayoutParams(dp(56), dp(56)))
@@ -152,7 +154,7 @@ class VideoPlayer(context: Context) : FrameLayout(context) {
             controls.visibility = if (controls.visibility == View.VISIBLE) View.GONE else View.VISIBLE
         }
 
-        // Инициализируем updateProgress ПОСЛЕ того, как videoView, progress и currentTime созданы
+        // 3. Инициализируем Runnable после создания всех зависимых view
         updateProgress = object : Runnable {
             override fun run() {
                 if (isPlaying) {
