@@ -88,13 +88,23 @@ class SettingsActivity : Activity() {
             row(R.drawable.ic_person, BLUE, "Аккаунт", "Имя, пользователь, «О себе»", onClick = {
                 startActivity(Intent(this, ProfileActivity::class.java))
             }),
-            row(R.drawable.ic_chat, ORANGE, "Настройки чатов", "Обои, ночной режим, анимации", onClick = soon),
+            row(R.drawable.ic_chat, ORANGE, "Настройки чатов", "Обои, ночной режим, анимации", onClick = {
+                startActivity(Intent(this, ChatSettingsActivity::class.java))
+            }),
             row(R.drawable.ic_key, GREEN, "Конфиденциальность", "Время захода, устройства, ключи", onClick = soon),
-            row(R.drawable.ic_bell, PINK, "Уведомления", "Звуки, звонки, счётчик сообщений", onClick = soon),
-            row(R.drawable.ic_data, INDIGO, "Данные и память", "Настройки загрузки медиафайлов", onClick = soon),
+            row(R.drawable.ic_bell, PINK, "Уведомления", "Звуки, звонки, счётчик сообщений", onClick = {
+                startActivity(Intent(this, NotificationsActivity::class.java))
+            }),
+            row(R.drawable.ic_data, INDIGO, "Данные и память", "Настройки загрузки медиафайлов", onClick = {
+                startActivity(Intent(this, DataStorageActivity::class.java))
+            }),
             row(R.drawable.ic_folder, CYAN, "Папки с чатами", "Сортировка чатов по папкам", onClick = soon),
-            row(R.drawable.ic_device, CYAN, "Устройства", "Управление активными сеансами", onClick = soon),
-            row(R.drawable.ic_globe, PURPLE, "Язык", "Русский", onClick = soon)
+            row(R.drawable.ic_device, CYAN, "Устройства", "Управление активными сеансами", onClick = {
+                startActivity(Intent(this, DevicesActivity::class.java))
+            }),
+            row(R.drawable.ic_globe, PURPLE, "Язык", "Русский", onClick = {
+                startActivity(Intent(this, LanguageActivity::class.java))
+            })
         ))
 
         addCard(content, listOf(
