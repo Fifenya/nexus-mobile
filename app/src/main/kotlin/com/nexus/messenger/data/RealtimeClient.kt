@@ -8,17 +8,23 @@ import io.socket.emitter.Emitter
 import org.json.JSONObject
 import java.net.URI
 
+// ─── DTO-события гейтвея ───
+
 data class RtMessage(
+    val id: String,
     val chatId: String,
     val senderId: String,
     val senderName: String,
     val text: String,
-    val chatTitle: String?
+    val chatTitle: String?,
+    val replyToId: String?,
+    val attachments: List<String>
 )
 
 data class RtPresence(
     val userId: String,
     val status: String,
+    val lastSeenAt: String?,
     val hidden: Boolean
 )
 
@@ -28,12 +34,21 @@ data class RtTyping(
     val isTyping: Boolean
 )
 
+data class RtChatUpdate(
+    val id: String,
+    val title: String?,
+    val lastMessageText: String?,
+    val lastMessageAt: String?
+)
+
 /**
- * Realtime-клиент Nexus под socket.io-гейтвей сервера.
- * Авторизация: handshake.auth.token (как в chat.gateway.ts).
- * События входа: message:new, message:updated, message:deleted,
- * message:reaction, typing:update, presence:update.
- * Исходящие: message:send (с ack), typing:start, typing:stop.
+ * Realtime-клиент под chat.gateway.ts:
+ *   авторизация: handshake.auth.token
+ *   комнаты: user:{userId}, chat:{chatId} (обе — на сервере при connect)
+ *   входящие события: message:new / updated / deleted / reaction,
+ *                     typing:update, presence:update, chat:updated
+ *   исходящие: message:send / edit / delete / react,
+ *              typing:start / stop, chat:join
  */
 object RealtimeClient {
     const val STATE_CONNECTING = "connecting"
@@ -48,14 +63,14 @@ object RealtimeClient {
         private set
 
     private val messageNewL = mutableListOf<(RtMessage) -> Unit>()
-    private val chatDirtyL = mutableListOf<(String) -> Unit>()
+    private val chatUpdateL = mutableListOf<(RtChatUpdate) -> Unit>()
     private val typingL = mutableListOf<(RtTyping) -> Unit>()
     private val presenceL = mutableListOf<(RtPresence) -> Unit>()
 
     fun addMessageListener(l: (RtMessage) -> Unit) { messageNewL.add(l) }
     fun removeMessageListener(l: (RtMessage) -> Unit) { messageNewL.remove(l) }
-    fun addChatDirtyListener(l: (String) -> Unit) { chatDirtyL.add(l) }
-    fun removeChatDirtyListener(l: (String) -> Unit) { chatDirtyL.remove(l) }
+    fun addChatUpdateListener(l: (RtChatUpdate) -> Unit) { chatUpdateL.add(l) }
+    fun removeChatUpdateListener(l: (RtChatUpdate) -> Unit) { chatUpdateL.remove(l) }
     fun addTypingListener(l: (RtTyping) -> Unit) { typingL.add(l) }
     fun removeTypingListener(l: (RtTyping) -> Unit) { typingL.remove(l) }
     fun addPresenceListener(l: (RtPresence) -> Unit) { presenceL.add(l) }
@@ -84,6 +99,10 @@ object RealtimeClient {
         }
     }
 
+    fun isConnected(): Boolean = state == STATE_ONLINE && socket?.connected() == true
+
+    // ─── Подключение ───
+
     private fun connect(ctx: Context) {
         val token = Store.token
         if (token.isNullOrEmpty()) {
@@ -98,7 +117,6 @@ object RealtimeClient {
                 reconnectionDelay = 2500
                 reconnectionDelayMax = 8000
                 timeout = 8000
-                // гейтвей читает handshake.auth.token
                 auth = mapOf("token" to token)
             }
             val s = IO.socket(URI(Store.apiBase), opts)
@@ -109,42 +127,40 @@ object RealtimeClient {
             s.on(Socket.EVENT_DISCONNECT) { setState(STATE_OFFLINE) }
             s.on(Socket.EVENT_CONNECT_ERROR) { setState(STATE_CONNECTING) }
 
+            // ── message:new: полный Prisma-объект сообщения ──
             s.on("message:new", Emitter.Listener { args ->
                 parseMessage(args.firstOrNull())?.let { m ->
                     messageNewL.toList().forEach { runCatching { it(m) } }
                 }
             })
 
-            val dirty = Emitter.Listener { args ->
-                val p = args.firstOrNull() as? JSONObject
-                val chatId = p?.optString("chatId")?.takeIf { it.isNotEmpty() && it != "null" }
-                    ?: (p?.optJSONObject("message")?.optString("chatId"))
-                    ?: (p?.optJSONObject("chat")?.optString("id"))
-                if (chatId != null) {
-                    chatDirtyL.toList().forEach { runCatching { it(chatId) } }
+            // ── chat:updated: сервер прислал обновлённые метаданные чата ──
+            s.on("chat:updated", Emitter.Listener { args ->
+                parseChatUpdate(args.firstOrNull())?.let { u ->
+                    chatUpdateL.toList().forEach { runCatching { it(u) } }
                 }
-            }
-            s.on("message:updated", dirty)
-            s.on("message:deleted", dirty)
-            s.on("message:reaction", dirty)
+            })
 
+            // ── typing:update ──
             s.on("typing:update", Emitter.Listener { args ->
                 val p = args.firstOrNull() as? JSONObject ?: return@Listener
                 val t = RtTyping(
-                    p.optString("chatId"),
-                    p.optString("userId"),
-                    p.optBoolean("isTyping")
+                    p.optString("chatId", ""),
+                    p.optString("userId", ""),
+                    p.optBoolean("isTyping", false)
                 )
-                if (t.chatId.isNotEmpty()) {
+                if (t.chatId.isNotEmpty() && t.userId.isNotEmpty()) {
                     typingL.toList().forEach { runCatching { it(t) } }
                 }
             })
 
+            // ── presence:update (с учётом приватности: hidden=true если scope=NOBODY) ──
             s.on("presence:update", Emitter.Listener { args ->
                 val p = args.firstOrNull() as? JSONObject ?: return@Listener
                 val pr = RtPresence(
-                    p.optString("userId"),
+                    p.optString("userId", ""),
                     p.optString("status", "offline"),
+                    p.optString("lastSeenAt").takeIf { it.isNotEmpty() && it != "null" },
                     p.optBoolean("hidden", false)
                 )
                 if (pr.userId.isNotEmpty()) {
@@ -159,55 +175,134 @@ object RealtimeClient {
         }
     }
 
-    /** Отправка через сокет. false = сокет не готов, нужен HTTP-fallback */
-    fun sendMessageViaSocket(
-        chatId: String,
-        text: String,
-        replyToId: String?,
-        onResult: (Boolean, JSONObject?) -> Unit
-    ): Boolean {
-        val s = socket ?: return false
-        if (state != STATE_ONLINE) return false
-        val payload = JSONObject().put("chatId", chatId).put("text", text)
-        if (replyToId != null) payload.put("replyToId", replyToId)
-        val ack = Ack { args ->
-            val obj = args?.firstOrNull() as? JSONObject
-            onResult(obj != null && obj.optString("id").isNotEmpty(), obj)
-        }
-        s.emit("message:send", payload, ack)
-        return true
-    }
+    // ─── Парсеры входящих событий ───
 
-    fun emitTyping(chatId: String, start: Boolean) {
-        val s = socket ?: return
-        if (state != STATE_ONLINE) return
-        s.emit(
-            if (start) "typing:start" else "typing:stop",
-            JSONObject().put("chatId", chatId)
-        )
-    }
-
-    /** Терпимый парсер message:new (полный Prisma-объект сообщения) */
-    fun parseMessage(raw: Any?): RtMessage? {
+    private fun parseMessage(raw: Any?): RtMessage? {
         val payload = when (raw) {
             is JSONObject -> raw
             is String -> runCatching { JSONObject(raw) }.getOrNull()
             else -> null
         } ?: return null
-        val msg = payload.optJSONObject("message") ?: payload
-        val chatId = msg.optString("chatId").takeIf { it.isNotEmpty() && it != "null" }
-            ?: msg.optJSONObject("chat")?.optString("id")?.takeIf { it.isNotEmpty() }
+        val id = payload.optString("id").takeIf { it.isNotEmpty() && it != "null" } ?: return null
+        val chatId = payload.optString("chatId").takeIf { it.isNotEmpty() && it != "null" }
+            ?: payload.optJSONObject("chat")?.optString("id")?.takeIf { it.isNotEmpty() }
             ?: return null
-        val senderId = msg.optString("senderId").takeIf { it.isNotEmpty() && it != "null" }
-            ?: msg.optJSONObject("sender")?.optString("id")?.takeIf { it.isNotEmpty() }
-            ?: msg.optString("authorId").takeIf { it.isNotEmpty() && it != "null" }
+        val senderId = payload.optString("senderId").takeIf { it.isNotEmpty() && it != "null" }
+            ?: payload.optJSONObject("sender")?.optString("id")?.takeIf { it.isNotEmpty() }
             ?: ""
-        val senderName = msg.optJSONObject("sender")?.optString("username")?.takeIf { it.isNotEmpty() && it != "null" }
-            ?: msg.optJSONObject("sender")?.optString("displayName")?.takeIf { it.isNotEmpty() && it != "null" }
-            ?: msg.optString("authorName").takeIf { it.isNotEmpty() && it != "null" }
+        val senderName = payload.optJSONObject("sender")?.optString("username")?.takeIf { it.isNotEmpty() && it != "null" }
+            ?: payload.optJSONObject("sender")?.optString("displayName")?.takeIf { it.isNotEmpty() && it != "null" }
             ?: "Кто-то"
-        val text = msg.optString("text").takeIf { it.isNotEmpty() && it != "null" } ?: ""
-        val chatTitle = msg.optJSONObject("chat")?.optString("title")?.takeIf { it.isNotEmpty() && it != "null" }
-        return RtMessage(chatId, senderId, senderName, text, chatTitle)
+        val text = payload.optString("text").takeIf { it.isNotEmpty() && it != "null" } ?: ""
+        val chatTitle = payload.optJSONObject("chat")?.optString("title")?.takeIf { it.isNotEmpty() && it != "null" }
+        val replyToId = payload.optString("replyToId").takeIf { it.isNotEmpty() && it != "null" }
+        val attArr = payload.optJSONArray("attachments")
+        val atts = mutableListOf<String>()
+        if (attArr != null) {
+            for (i in 0 until attArr.length()) {
+                attArr.optJSONObject(i)?.optString("url")?.takeIf { it.isNotEmpty() && it != "null" }?.let { atts.add(it) }
+            }
+        }
+        return RtMessage(id, chatId, senderId, senderName, text, chatTitle, replyToId, atts)
+    }
+
+    private fun parseChatUpdate(raw: Any?): RtChatUpdate? {
+        val p = when (raw) {
+            is JSONObject -> raw
+            is String -> runCatching { JSONObject(raw) }.getOrNull()
+            else -> null
+        } ?: return null
+        val id = p.optString("id").takeIf { it.isNotEmpty() && it != "null" } ?: return null
+        val title = p.optString("title").takeIf { it.isNotEmpty() && it != "null" }
+        val lm = p.optJSONObject("lastMessage")
+        val lmText = lm?.optString("text")?.takeIf { it.isNotEmpty() && it != "null" }
+        val lmAt = lm?.optString("createdAt")?.takeIf { it.isNotEmpty() && it != "null" }
+            ?: p.optString("updatedAt").takeIf { it.isNotEmpty() && it != "null" }
+        return RtChatUpdate(id, title, lmText, lmAt)
+    }
+
+    // ─── Исходящие сообщения ───
+
+    /**
+     * Отправка через сокет с ack.
+     * onResult(ok, payload) — ok=true если сервер прислал созданный message (id не пустой).
+     * Возвращает true, если emit прошёл (или в очереди); false — сокет недоступен, нужен HTTP-fallback.
+     */
+    fun sendMessage(
+        chatId: String,
+        text: String,
+        replyToId: String?,
+        onResult: (Boolean, RtMessage?) -> Unit
+    ): Boolean {
+        val s = socket ?: return false
+        if (state == STATE_OFFLINE) return false
+        val payload = JSONObject().apply {
+            put("chatId", chatId)
+            put("text", text)
+            if (replyToId != null) put("replyToId", replyToId)
+        }
+        val ack = Ack { args ->
+            val obj = args?.firstOrNull() as? JSONObject
+            val parsed = obj?.let { parseMessage(it) }
+            onResult(parsed != null, parsed)
+        }
+        s.emit("message:send", payload, ack)
+        return true
+    }
+
+    fun editMessage(chatId: String, messageId: String, text: String, onResult: (Boolean) -> Unit = {}) {
+        val s = socket ?: return
+        val payload = JSONObject()
+            .put("chatId", chatId)
+            .put("messageId", messageId)
+            .put("text", text)
+        val ack = Ack { args ->
+            val obj = args?.firstOrNull() as? JSONObject
+            onResult(obj != null && obj.optString("id").isNotEmpty())
+        }
+        s.emit("message:edit", payload, ack)
+    }
+
+    fun deleteMessage(chatId: String, messageId: String, onResult: (Boolean) -> Unit = {}) {
+        val s = socket ?: return
+        val payload = JSONObject()
+            .put("chatId", chatId)
+            .put("messageId", messageId)
+        val ack = Ack { args ->
+            val obj = args?.firstOrNull() as? JSONObject
+            onResult(obj?.optBoolean("ok") == true)
+        }
+        s.emit("message:delete", payload, ack)
+    }
+
+    fun reactToMessage(messageId: String, emoji: String, onResult: (Boolean) -> Unit = {}) {
+        val s = socket ?: return
+        val payload = JSONObject()
+            .put("messageId", messageId)
+            .put("emoji", emoji)
+        val ack = Ack { args ->
+            val obj = args?.firstOrNull() as? JSONObject
+            onResult(obj != null)
+        }
+        s.emit("message:react", payload, ack)
+    }
+
+    // ─── Тайпинг ───
+
+    fun startTyping(chatId: String) {
+        val s = socket ?: return
+        s.emit("typing:start", JSONObject().put("chatId", chatId))
+    }
+
+    fun stopTyping(chatId: String) {
+        val s = socket ?: return
+        s.emit("typing:stop", JSONObject().put("chatId", chatId))
+    }
+
+    // ─── Комнаты ───
+
+    fun joinChat(chatId: String) {
+        val s = socket ?: return
+        s.emit("chat:join", JSONObject().put("chatId", chatId))
     }
 }
