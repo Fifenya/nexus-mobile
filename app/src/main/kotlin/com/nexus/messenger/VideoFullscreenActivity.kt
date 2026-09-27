@@ -1,7 +1,6 @@
 package com.nexus.messenger
 
 import android.app.Activity
-import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -19,6 +18,7 @@ import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.VideoView
+import com.nexus.messenger.ui.dp
 import java.util.Locale
 
 class VideoFullscreenActivity : Activity() {
