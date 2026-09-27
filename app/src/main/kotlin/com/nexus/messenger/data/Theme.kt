@@ -1,21 +1,19 @@
 package com.nexus.messenger.data
 
-import android.content.Context
 import android.graphics.Color
 import com.nexus.messenger.R
 import org.json.JSONObject
 
-/** Движок тем: серверные цвета перекрывают ресурсы приложения */
 object Theme {
     private var colors: JSONObject? = null
 
-    fun load(ctx: Context) {
+    fun load(@Suppress("UNUSED_PARAMETER") ctx: android.content.Context) {
         colors = LocalPrefs.themeJson?.let {
             try { JSONObject(it) } catch (e: Exception) { null }
         }
     }
 
-    fun reset(ctx: Context) {
+    fun reset(@Suppress("UNUSED_PARAMETER") ctx: android.content.Context) {
         LocalPrefs.themeJson = null
         colors = null
     }
@@ -43,19 +41,17 @@ object Theme {
 
     private fun withAlpha(c: Int, alpha: Int): Int = (alpha shl 24) or (c and 0x00FFFFFF)
 
-    /** Тёмно-серая поверхность поверх surface (для полей и разделителей) */
     fun surface2(): Int? =
         opt("surface2") ?: opt("surface")?.let { lighten(it, 0.10f) }
 
     fun accentAlpha(alpha: Int): Int? = opt("accent")?.let { withAlpha(it, alpha) }
 
-    /** Градиент фона входа из темы */
     fun bgGradient(): IntArray? {
         val bg = opt("background") ?: return null
         return intArrayOf(lighten(bg, 0.10f), bg, darken(bg, 0.45f))
     }
 
-    fun color(ctx: Context, res: Int): Int {
+    fun color(ctx: android.content.Context, res: Int): Int {
         val c = when (res) {
             R.color.bgPrimary -> opt("background")
             R.color.bgSecondary -> opt("surface")

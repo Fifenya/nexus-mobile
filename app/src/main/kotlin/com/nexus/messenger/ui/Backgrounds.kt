@@ -10,7 +10,7 @@ import android.widget.TextView
 import com.nexus.messenger.data.Theme
 
 object Backgrounds {
-    fun base(ctx: Context): GradientDrawable {
+    fun base(@Suppress("UNUSED_PARAMETER") ctx: Context): GradientDrawable {
         val grad = Theme.bgGradient()
         return if (grad != null) {
             GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, grad)
@@ -22,7 +22,7 @@ object Backgrounds {
         }
     }
 
-    private fun glowColor(ctx: Context, alpha: Int): Int {
+    private fun glowColor(@Suppress("UNUSED_PARAMETER") ctx: Context, alpha: Int): Int {
         val a = Theme.accentAlpha(alpha)
         return a ?: ((alpha shl 24) or 0xDC2626)
     }

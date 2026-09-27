@@ -74,9 +74,9 @@ object RealtimeClient {
     }
 
     @Synchronized
-    fun retain(ctx: Context) {
+    fun retain(@Suppress("UNUSED_PARAMETER") ctx: Context) {
         refs++
-        if (socket == null) connect(ctx)
+        if (socket == null) connect()
     }
 
     @Synchronized
@@ -94,7 +94,7 @@ object RealtimeClient {
 
     fun isConnected(): Boolean = state == STATE_ONLINE && socket?.connected() == true
 
-    private fun connect(ctx: Context) {
+    private fun connect() {
         val token = Store.token
         if (token.isNullOrEmpty()) {
             setState(STATE_OFFLINE)

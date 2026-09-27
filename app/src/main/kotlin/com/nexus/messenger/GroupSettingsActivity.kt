@@ -3,8 +3,11 @@ package com.nexus.messenger
 import android.app.Activity
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -16,28 +19,44 @@ import org.json.JSONObject
 
 class GroupSettingsActivity : Activity() {
     private lateinit var chatId: String
-    private lateinit var reactionsValue: TextView
-    private lateinit var slowModeValue: TextView
-    private lateinit var sendValue: TextView
-    private lateinit var inviteValue: TextView
-    private lateinit var pinValue: TextView
+    private lateinit var reactionsSub: TextView
+    private lateinit var slowSub: TextView
+    private lateinit var sendSub: TextView
+    private lateinit var inviteSub: TextView
+    private lateinit var pinSub: TextView
 
     private var reactions = "all"
     private var slowMode = 0
-    private var sendMessages = "all"
-    private var inviteUsers = "all"
-    private var pinMessages = "admin"
+    private var sendPerm = "all"
+    private var invitePerm = "all"
+    private var pinPerm = "admin"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         chatId = intent.getStringExtra("chatId") ?: run { finish(); return }
-        val title = intent.getStringExtra("title") ?: "Группа"
 
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(color(R.color.bgPrimary))
+        val frame = FrameLayout(this)
+        frame.setBackgroundColor(color(R.color.bgPrimary))
+
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(color(R.color.bgSecondary))
+            setPadding(dp(4), dp(10), dp(16), dp(10))
         }
-        root.addView(header("Настройки группы"))
+        val back = TextView(this).apply {
+            text = "←"
+            textSize = 24f
+            setTextColor(color(R.color.accentText))
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+        }
+        back.setOnClickListener { finish() }
+        header.addView(back)
+        header.addView(Ui.text(this, "Настройки группы", 20f, R.color.textPrimary, true),
+            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(8) })
+        root.addView(header, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         val scroll = ScrollView(this)
         val content = LinearLayout(this).apply {
@@ -45,144 +64,138 @@ class GroupSettingsActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(32))
         }
 
-        // ── Реакции и slow mode ──
-        val chatCard = LinearLayout(this).apply {
+        val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Ui.card(this@GroupSettingsActivity)
         }
-        chatCard.addView(sectionLabel("Чат"))
+        card.addView(sectionLabel("Общие"))
 
-        reactionsValue = Ui.text(this, "", 14f, R.color.accentText)
-        chatCard.addView(tapRow("Реакции на сообщения", reactionsValue) {
-            NxDialog(this).title("Реакции")
-                .items(listOf("Все пользователи", "Отключены")) { i ->
-                    reactions = if (i == 0) "all" else "disabled"
-                    save()
+        reactionsSub = Ui.text(this, reactionsLabel(), 14f, R.color.textSecondary)
+        card.addView(row("Реакции", reactionsSub) {
+            NxDialog(this).title("Кто может ставить реакции")
+                .items(listOf("Все участники", "Только админы", "Выключены")) { i ->
+                    reactions = when (i) { 0 -> "all"; 1 -> "admin"; else -> "off" }
+                    reactionsSub.text = reactionsLabel()
                 }.show()
         })
-        chatCard.addView(dividerInset())
+        card.addView(divider())
 
-        slowModeValue = Ui.text(this, "", 14f, R.color.accentText)
-        chatCard.addView(tapRow("Медленный режим", slowModeValue) {
-            NxDialog(this).title("Задержка между сообщениями")
-                .items(listOf("Выкл.", "10 секунд", "30 секунд", "1 минута", "5 минут")) { i ->
-                    slowMode = when (i) { 0 -> 0; 1 -> 10; 2 -> 30; 3 -> 60; 4 -> 300; else -> 0 }
-                    save()
+        slowSub = Ui.text(this, slowLabel(), 14f, R.color.textSecondary)
+        card.addView(row("Медленный режим", slowSub) {
+            NxDialog(this).title("Интервал сообщений")
+                .items(listOf("Выключен", "10 секунд", "30 секунд", "1 минута", "5 минут")) { i ->
+                    slowMode = when (i) { 0 -> 0; 1 -> 10; 2 -> 30; 3 -> 60; else -> 300 }
+                    slowSub.text = slowLabel()
                 }.show()
         })
-        content.addView(chatCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        // ── Разрешения ──
-        val permCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = Ui.card(this@GroupSettingsActivity)
+        card.addView(sectionLabel("Разрешения"))
+
+        sendSub = Ui.text(this, permLabel(sendPerm), 14f, R.color.textSecondary)
+        card.addView(row("Отправка сообщений", sendSub) {
+            NxDialog(this).title("Кто может писать")
+                .items(listOf("Все участники", "Только админы")) { i ->
+                    sendPerm = if (i == 0) "all" else "admin"
+                    sendSub.text = permLabel(sendPerm)
+                }.show()
+        })
+        card.addView(divider())
+
+        inviteSub = Ui.text(this, permLabel(invitePerm), 14f, R.color.textSecondary)
+        card.addView(row("Приглашение участников", inviteSub) {
+            NxDialog(this).title("Кто может приглашать")
+                .items(listOf("Все участники", "Только админы")) { i ->
+                    invitePerm = if (i == 0) "all" else "admin"
+                    inviteSub.text = permLabel(invitePerm)
+                }.show()
+        })
+        card.addView(divider())
+
+        pinSub = Ui.text(this, permLabel(pinPerm), 14f, R.color.textSecondary)
+        card.addView(row("Закрепление сообщений", pinSub) {
+            NxDialog(this).title("Кто может закреплять")
+                .items(listOf("Все участники", "Только админы")) { i ->
+                    pinPerm = if (i == 0) "all" else "admin"
+                    pinSub.text = permLabel(pinPerm)
+                }.show()
+        })
+
+        content.addView(card, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
+        val saveBtn = TextView(this).apply {
+            text = "Сохранить"
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setTextColor(0xFFFFFFFF.toInt())
+            paint.isFakeBoldText = true
+            background = Ui.pill(this@GroupSettingsActivity, R.color.accent)
+            elevation = dp(6).toFloat()
         }
-        permCard.addView(sectionLabel("Разрешения участников"))
+        saveBtn.setOnClickListener { save() }
+        content.addView(saveBtn, LinearLayout.LayoutParams(MATCH_PARENT, dp(52)).apply { topMargin = dp(16) })
 
-        sendValue = Ui.text(this, "", 14f, R.color.accentText)
-        permCard.addView(tapRow("Отправка сообщений", sendValue) {
-            NxDialog(this).title("Кто может отправлять сообщения")
-                .items(listOf("Все участники", "Только администраторы")) { i ->
-                    sendMessages = if (i == 0) "all" else "admin"
-                    save()
-                }.show()
-        })
-        permCard.addView(dividerInset())
-
-        inviteValue = Ui.text(this, "", 14f, R.color.accentText)
-        permCard.addView(tapRow("Добавление участников", inviteValue) {
-            NxDialog(this).title("Кто может добавлять участников")
-                .items(listOf("Все участники", "Только администраторы")) { i ->
-                    inviteUsers = if (i == 0) "all" else "admin"
-                    save()
-                }.show()
-        })
-        permCard.addView(dividerInset())
-
-        pinValue = Ui.text(this, "", 14f, R.color.accentText)
-        permCard.addView(tapRow("Закрепление сообщений", pinValue) {
-            NxDialog(this).title("Кто может закреплять сообщения")
-                .items(listOf("Все участники", "Только администраторы")) { i ->
-                    pinMessages = if (i == 0) "all" else "admin"
-                    save()
-                }.show()
-        })
-        content.addView(permCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) })
-
-        content.addView(Ui.text(this, "Изменения применяются ко всем участникам группы.", 12f, R.color.textMuted),
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12) })
-
-        scroll.addView(content)
-        root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
-        setContentView(root)
+        scroll.addView(content, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        frame.addView(scroll, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        frame.addView(root, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        setContentView(frame)
 
         load()
     }
 
     private fun color(res: Int): Int = resources.getColor(res, null)
 
-    private fun header(title: String): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setBackgroundColor(color(R.color.bgSecondary))
-        setPadding(dp(4), dp(10), dp(16), dp(10))
-        val back = TextView(this@GroupSettingsActivity).apply {
-            text = "←"
-            textSize = 24f
-            setTextColor(color(R.color.accentText))
-            setPadding(dp(12), dp(8), dp(12), dp(8))
-        }
-        back.setOnClickListener { finish() }
-        addView(back)
-        addView(Ui.text(this@GroupSettingsActivity, title, 20f, R.color.textPrimary, true),
-            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(8) })
-    }
-
     private fun sectionLabel(s: String): TextView =
         Ui.text(this, s, 13f, R.color.accentText, true).apply { setPadding(dp(16), dp(14), dp(16), dp(6)) }
 
-    private fun dividerInset() = android.view.View(this).apply { setBackgroundColor(color(R.color.divider)) }
+    private fun divider(): View = View(this).apply { setBackgroundColor(color(R.color.divider)) }
 
-    private fun tapRow(title: String, valueView: TextView, onClick: () -> Unit): LinearLayout =
+    private fun row(titleText: String, sub: TextView, onClick: () -> Unit): LinearLayout =
         LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(14))
-            addView(Ui.text(this@GroupSettingsActivity, title, 16f, R.color.textPrimary),
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            addView(Ui.text(this@GroupSettingsActivity, titleText, 16f, R.color.textPrimary),
                 LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-            addView(valueView)
+            addView(sub)
             setOnClickListener { onClick() }
         }
+
+    private fun reactionsLabel(): String = when (reactions) {
+        "all" -> "Все участники"
+        "admin" -> "Только админы"
+        else -> "Выключены"
+    }
+
+    private fun slowLabel(): String = when (slowMode) {
+        0 -> "Выключен"
+        10 -> "10 секунд"
+        30 -> "30 секунд"
+        60 -> "1 минута"
+        else -> "5 минут"
+    }
+
+    private fun permLabel(p: String): String = if (p == "all") "Все участники" else "Только админы"
 
     private fun load() {
         Api.get("/chats/$chatId/settings") { code, body ->
             runOnUiThread {
                 if (code != 200) return@runOnUiThread
                 val j = Api.parseObj(body) ?: return@runOnUiThread
-                reactions = j.optString("reactions", "all")
+                reactions = j.optString("reactions").ifEmpty { "all" }
                 slowMode = j.optInt("slowMode", 0)
-                val perm = j.optJSONObject("permissions") ?: JSONObject()
-                sendMessages = perm.optString("sendMessages", "all")
-                inviteUsers = perm.optString("inviteUsers", "all")
-                pinMessages = perm.optString("pinMessages", "admin")
-                renderValues()
+                val perms = j.optJSONObject("permissions")
+                if (perms != null) {
+                    sendPerm = perms.optString("sendMessages").ifEmpty { "all" }
+                    invitePerm = perms.optString("inviteUsers").ifEmpty { "all" }
+                    pinPerm = perms.optString("pinMessages").ifEmpty { "admin" }
+                }
+                reactionsSub.text = reactionsLabel()
+                slowSub.text = slowLabel()
+                sendSub.text = permLabel(sendPerm)
+                inviteSub.text = permLabel(invitePerm)
+                pinSub.text = permLabel(pinPerm)
             }
         }
-    }
-
-    private fun renderValues() {
-        reactionsValue.text = if (reactions == "all") "Все пользователи" else "Отключены"
-        slowModeValue.text = when (slowMode) {
-            0 -> "Выкл."
-            10 -> "10 секунд"
-            30 -> "30 секунд"
-            60 -> "1 минута"
-            300 -> "5 минут"
-            else -> "—"
-        }
-        sendValue.text = if (sendMessages == "all") "Все участники" else "Только админы"
-        inviteValue.text = if (inviteUsers == "all") "Все участники" else "Только админы"
-        pinValue.text = if (pinMessages == "all") "Все участники" else "Только админы"
     }
 
     private fun save() {
@@ -190,15 +203,19 @@ class GroupSettingsActivity : Activity() {
             put("reactions", reactions)
             put("slowMode", slowMode)
             put("permissions", JSONObject().apply {
-                put("sendMessages", sendMessages)
-                put("inviteUsers", inviteUsers)
-                put("pinMessages", pinMessages)
+                put("sendMessages", sendPerm)
+                put("inviteUsers", invitePerm)
+                put("pinMessages", pinPerm)
             })
         }
-        Api.patch("/chats/$chatId/settings", body) { code, _ ->
+        Api.patch("/chats/$chatId/settings", body) { code, resp ->
             runOnUiThread {
-                renderValues()
-                Ui.snackbar(this, if (code in 200..299) "Сохранено" else "Не удалось сохранить")
+                if (code in 200..299) {
+                    Ui.snackbar(this, "Сохранено ✓")
+                    finish()
+                } else {
+                    Ui.snackbar(this, Api.friendlyError(resp))
+                }
             }
         }
     }

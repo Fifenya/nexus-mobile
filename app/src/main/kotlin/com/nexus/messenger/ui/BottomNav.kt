@@ -3,6 +3,7 @@ package com.nexus.messenger.ui
 import android.app.Activity
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.os.Build
 import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -72,7 +73,12 @@ object BottomNav {
                 }
                 activity.startActivity(Intent(activity, cls))
                 activity.finish()
-                activity.overridePendingTransition(0, 0)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    activity.overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, 0)
+                } else {
+                    @Suppress("DEPRECATION")
+                    activity.overridePendingTransition(0, 0)
+                }
             }
         }
         bar.addView(v, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
@@ -106,7 +112,12 @@ object BottomNav {
             if (!active) {
                 activity.startActivity(Intent(activity, ProfileActivity::class.java))
                 activity.finish()
-                activity.overridePendingTransition(0, 0)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    activity.overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, 0)
+                } else {
+                    @Suppress("DEPRECATION")
+                    activity.overridePendingTransition(0, 0)
+                }
             }
         }
         bar.addView(v, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))

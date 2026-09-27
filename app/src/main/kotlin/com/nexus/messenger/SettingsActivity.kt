@@ -82,13 +82,11 @@ class SettingsActivity : Activity() {
         )
         content.addView(head, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        val soon = { Ui.snackbar(this, "Появится в следующем обновлении") }
-
         serverSub = Ui.text(this, Store.apiBase, 13f, R.color.textSecondary)
 
         addCard(content, listOf(
             row(R.drawable.ic_person, BLUE, "Аккаунт", "Имя, пользователь, «О себе»", onClick = {
-                startActivity(Intent(this, ProfileActivity::class.java))
+                startActivity(Intent(this, AccountActivity::class.java))
             }),
             row(R.drawable.ic_chat, ORANGE, "Настройки чатов", "Обои, ночной режим, анимации", onClick = {
                 startActivity(Intent(this, ChatSettingsActivity::class.java))

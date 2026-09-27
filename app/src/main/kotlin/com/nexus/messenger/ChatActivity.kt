@@ -713,7 +713,7 @@ class ChatActivity : Activity() {
             runOnUiThread {
                 if (code != 200) return@runOnUiThread
                 val u = User.fromJson(Api.parseObj(body) ?: return@runOnUiThread)
-                applyPresence(u.onlineStatus ?: (if (u.online) "online" else "offline"), false)
+                applyPresence(u.onlineStatus ?: if (u.online) "online" else "offline", false)
             }
         }
     }

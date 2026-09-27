@@ -71,7 +71,6 @@ object LocalPrefs {
         get() = prefs.getBoolean("power_save", false)
         set(v) = prefs.edit().putBoolean("power_save", v).apply()
 
-    /** JSON цветов активной серверной темы (null = стандартная) */
     var themeJson: String?
         get() = prefs.getString("theme_json", null)
         set(v) = prefs.edit().apply {
@@ -87,10 +86,10 @@ object LocalPrefs {
     fun formatLocale(): Locale =
         if (forceRu) Locale("ru") else Locale.getDefault()
 
-    fun isMuted(ctx: Context, chatId: String): Boolean =
+    fun isMuted(@Suppress("UNUSED_PARAMETER") ctx: Context, chatId: String): Boolean =
         prefs.getStringSet("muted_chats", emptySet())?.contains(chatId) == true
 
-    fun setMuted(ctx: Context, chatId: String, muted: Boolean) {
+    fun setMuted(@Suppress("UNUSED_PARAMETER") ctx: Context, chatId: String, muted: Boolean) {
         val s = prefs.getStringSet("muted_chats", emptySet())?.toMutableSet() ?: mutableSetOf()
         if (muted) s.add(chatId) else s.remove(chatId)
         prefs.edit().putStringSet("muted_chats", s).apply()
@@ -98,14 +97,14 @@ object LocalPrefs {
 
     fun presenceIntervalMs(): Long = if (powerSave) 60000L else 20000L
 
-    fun cacheSize(ctx: Context): Long {
+    fun cacheSize(@Suppress("UNUSED_PARAMETER") ctx: Context): Long {
         val c = ctx.getSharedPreferences("nexus_cache", Context.MODE_PRIVATE)
         var sum = 0L
         c.all.values.forEach { sum += ((it as? String)?.length ?: 0).toLong() }
         return sum * 2
     }
 
-    fun clearCache(ctx: Context) {
+    fun clearCache(@Suppress("UNUSED_PARAMETER") ctx: Context) {
         ctx.getSharedPreferences("nexus_cache", Context.MODE_PRIVATE).edit().clear().apply()
     }
 

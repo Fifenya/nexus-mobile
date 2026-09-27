@@ -1,125 +1,172 @@
 package com.nexus.messenger
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
-import android.widget.*
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
 import com.nexus.messenger.data.Api
+import com.nexus.messenger.ui.NxDialog
+import com.nexus.messenger.ui.Ui
+import com.nexus.messenger.ui.dp
 import org.json.JSONObject
 
 class BotsActivity : Activity() {
-    private val bots = mutableListOf<Pair<String, String>>()
-    private lateinit var list: ListView
-    private lateinit var emptyText: TextView
+    private lateinit var listCard: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(resources.getColor(R.color.bgPrimary, null))
+            setBackgroundColor(color(R.color.bgPrimary))
         }
 
         val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(resources.getColor(R.color.bgSecondary, null))
-            setPadding(16, 32, 16, 32)
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(color(R.color.bgSecondary))
+            setPadding(dp(4), dp(10), dp(16), dp(10))
         }
-        val back = Button(this).apply {
-            text = "←"; setBackgroundColor(0); setTextColor(resources.getColor(R.color.accent, null)); textSize = 22f
+        val back = TextView(this).apply {
+            text = "←"
+            textSize = 24f
+            setTextColor(color(R.color.accentText))
+            setPadding(dp(12), dp(8), dp(12), dp(8))
         }
         back.setOnClickListener { finish() }
         header.addView(back)
-        header.addView(TextView(this).apply {
-            text = "Боты"; textSize = 20f; setTextColor(resources.getColor(R.color.textPrimary, null))
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = 16 })
-        val add = Button(this).apply {
-            text = "+"; setBackgroundColor(0); setTextColor(resources.getColor(R.color.accent, null)); textSize = 26f
-        }
-        add.setOnClickListener { createBot() }
-        header.addView(add)
-        root.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        header.addView(Ui.text(this, "Мои боты", 20f, R.color.textPrimary, true),
+            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(8) })
+        root.addView(header, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
-        list = ListView(this).apply { setBackgroundColor(resources.getColor(R.color.bgPrimary, null)) }
-        val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, mutableListOf<String>())
-        list.adapter = adapter
-        root.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-
-        emptyText = TextView(this).apply {
-            text = "У вас пока нет ботов"; gravity = Gravity.CENTER
-            setTextColor(resources.getColor(R.color.textMuted, null))
-            visibility = View.GONE
-        }
-        root.addView(emptyText)
-
-        list.setOnItemLongClickListener { _, _, pos, _ ->
-            val (id, name) = bots[pos]
-            AlertDialog.Builder(this)
-                .setTitle(name)
-                .setItems(arrayOf("🔄 Обновить токен", "🗑️ Удалить")) { _, i ->
-                    when (i) {
-                        0 -> Api.post("/bots/$id/regenerate-token", JSONObject()) { code, body ->
-                            runOnUiThread {
-                                val j = Api.parseObj(body)
-                                AlertDialog.Builder(this).setTitle("Токен").setMessage(j?.optString("token") ?: body).setPositiveButton("OK", null).show()
-                            }
-                        }
-                        1 -> Api.delete("/bots/$id") { _, _ -> runOnUiThread { loadBots() } }
-                    }
-                }
-                .show()
-            true
+        val scroll = ScrollView(this)
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(12), dp(12), dp(32))
         }
 
+        val createCard = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = Ui.card(this@BotsActivity)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+        }
+        createCard.addView(Ui.tileIcon(this, R.drawable.ic_bot, 0xFFE09A3F.toInt()),
+            LinearLayout.LayoutParams(dp(40), dp(40)))
+        createCard.addView(Ui.text(this, "Создать нового бота", 16f, R.color.accentText),
+            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(16) })
+        createCard.setOnClickListener { showCreateDialog() }
+        content.addView(createCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
+        content.addView(Ui.text(this, "Существующие боты", 13f, R.color.accentText, true)
+            .apply { setPadding(dp(4), dp(16), dp(4), dp(6)) },
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
+        listCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Ui.card(this@BotsActivity)
+        }
+        content.addView(listCard, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
+        scroll.addView(content)
+        root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         setContentView(root)
-        loadBots()
+
+        load()
     }
 
-    private fun loadBots() {
+    private fun color(res: Int): Int = resources.getColor(res, null)
+
+    private fun load() {
         Api.get("/bots") { code, body ->
             runOnUiThread {
-                bots.clear()
-                if (code == 200) {
-                    val arr = Api.parseArray(body)
-                    for (i in 0 until arr.length()) {
-                        val j = arr.getJSONObject(i)
-                        bots.add(j.optString("id") to j.optString("name"))
+                listCard.removeAllViews()
+                if (code != 200) {
+                    listCard.addView(Ui.text(this, "Сервер ботов недоступен", 14f, R.color.textMuted)
+                        .apply { setPadding(dp(16), dp(14), dp(16), dp(14)) })
+                    return@runOnUiThread
+                }
+                val arr = Api.parseArray(body)
+                if (arr.length() == 0) {
+                    listCard.addView(Ui.text(this, "У вас пока нет ботов", 14f, R.color.textMuted)
+                        .apply { setPadding(dp(16), dp(14), dp(16), dp(14)) })
+                    return@runOnUiThread
+                }
+                for (i in 0 until arr.length()) {
+                    val b = arr.optJSONObject(i) ?: continue
+                    val name = b.optString("name")
+                    val username = b.optString("username")
+                    val token = b.optString("token")
+                    val row = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(16), dp(12), dp(16), dp(12))
                     }
-                    @Suppress("UNCHECKED_CAST")
-                    (list.adapter as ArrayAdapter<String>).apply {
-                        clear()
-                        addAll(bots.map { "🤖 ${it.second}" })
-                        notifyDataSetChanged()
+                    row.addView(Ui.tileIcon(this, R.drawable.ic_bot, 0xFFE09A3F.toInt()),
+                        LinearLayout.LayoutParams(dp(40), dp(40)))
+                    val mid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                    mid.addView(Ui.text(this, name, 16f, R.color.textPrimary, true),
+                        LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+                    mid.addView(Ui.text(this, "@$username", 13f, R.color.textSecondary),
+                        LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(2) })
+                    row.addView(mid, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { leftMargin = dp(16) })
+                    row.setOnClickListener {
+                        NxDialog(this@BotsActivity).title(name)
+                            .message("Токен бота:\n$token\n\nИспользуйте этот токен для авторизации в вебхуках и команд.")
+                            .button("OK") {}
+                            .show()
+                    }
+                    listCard.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+                    if (i < arr.length() - 1) {
+                        listCard.addView(View(this).apply { setBackgroundColor(color(R.color.divider)) },
+                            LinearLayout.LayoutParams(MATCH_PARENT, 1).apply { leftMargin = dp(72) })
                     }
                 }
-                emptyText.visibility = if (bots.isEmpty()) View.VISIBLE else View.GONE
-                list.visibility = if (bots.isEmpty()) View.GONE else View.VISIBLE
             }
         }
     }
 
-    private fun createBot() {
-        val input = EditText(this).apply {
-            hint = "Имя бота"; setTextColor(resources.getColor(R.color.textPrimary, null))
-            setHintTextColor(resources.getColor(R.color.textMuted, null))
+    private fun showCreateDialog() {
+        val nameInput = EditText(this).apply {
+            hint = "Имя бота"
+            setTextColor(color(R.color.textPrimary))
+            setHintTextColor(color(R.color.textMuted))
+            background = Ui.pill(this@BotsActivity, R.color.bgInput)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
         }
-        AlertDialog.Builder(this)
-            .setTitle("Новый бот").setView(input)
-            .setPositiveButton("Создать") { _, _ ->
-                Api.post("/bots", JSONObject().put("name", input.text.toString())) { code, body ->
+        val userInput = EditText(this).apply {
+            hint = "Имя пользователя (@username)"
+            setTextColor(color(R.color.textPrimary))
+            setHintTextColor(color(R.color.textMuted))
+            background = Ui.pill(this@BotsActivity, R.color.bgInput)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+        }
+        NxDialog(this)
+            .title("Новый бот")
+            .view(nameInput)
+            .view(userInput)
+            .button("Создать") {
+                val body = JSONObject()
+                    .put("name", nameInput.text.toString().trim())
+                    .put("username", userInput.text.toString().trim())
+                Api.post("/bots", body) { code, _ ->
                     runOnUiThread {
-                        if (code == 200 || code == 201) {
-                            val j = Api.parseObj(body)
-                            AlertDialog.Builder(this).setTitle("Бот создан").setMessage("Токен: " + (j?.optString("token") ?: "см. в API")).setPositiveButton("OK", null).show()
-                            loadBots()
+                        if (code in 200..299) {
+                            Ui.snackbar(this, "Бот создан")
+                            load()
                         } else {
-                            AlertDialog.Builder(this).setMessage(body).setPositiveButton("OK", null).show()
+                            Ui.snackbar(this, "Не удалось создать бота")
                         }
                     }
                 }
             }
-            .setNegativeButton("Отмена", null).show()
+            .button("Отмена") {}
+            .show()
     }
 }

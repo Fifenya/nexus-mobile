@@ -1,6 +1,5 @@
 package com.nexus.messenger.data
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -13,7 +12,7 @@ import java.net.URL
 object ImageLoader {
     private val cache = LruCache<String, Bitmap>(64)
 
-    fun load(ctx: Context, url: String, into: ImageView, placeholderColor: Int = 0xFF201012.toInt()) {
+    fun load(@Suppress("UNUSED_PARAMETER") ctx: android.content.Context, url: String, into: ImageView, placeholderColor: Int = 0xFF201012.toInt()) {
         into.setBackgroundColor(placeholderColor)
         into.setImageDrawable(null)
         cache.get(url)?.let { into.setImageBitmap(it); return }

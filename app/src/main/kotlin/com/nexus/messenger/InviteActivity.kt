@@ -25,7 +25,6 @@ class InviteActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         chatId = intent.getStringExtra("chatId") ?: run { finish(); return }
-        val title = intent.getStringExtra("title") ?: "Группа"
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -183,7 +182,7 @@ class InviteActivity : Activity() {
     }
 
     private fun createInvite() {
-        Api.post("/chats/$chatId/invites", JSONObject()) { code, body ->
+        Api.post("/chats/$chatId/invites", JSONObject()) { code, _ ->
             runOnUiThread {
                 if (code in 200..299) {
                     Ui.snackbar(this, "Ссылка создана")
