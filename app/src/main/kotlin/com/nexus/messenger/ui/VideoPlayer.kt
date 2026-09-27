@@ -21,13 +21,13 @@ import java.util.Locale
 
 class VideoPlayer(context: Context) : FrameLayout(context) {
 
-    private val videoView: VideoView
-    private val playBtn: ImageView
-    private val pauseBtn: ImageView
-    private val progress: SeekBar
-    private val currentTime: TextView
-    private val totalTime: TextView
-    private val controls: LinearLayout
+    private lateinit var videoView: VideoView
+    private lateinit var playBtn: ImageView
+    private lateinit var pauseBtn: ImageView
+    private lateinit var progress: SeekBar
+    private lateinit var currentTime: TextView
+    private lateinit var totalTime: TextView
+    private lateinit var controls: LinearLayout
     private val handler = Handler(Looper.getMainLooper())
 
     private var isPlaying = false
@@ -55,7 +55,6 @@ class VideoPlayer(context: Context) : FrameLayout(context) {
             gravity = Gravity.CENTER
         }
 
-        // 1. Сначала инициализируем pauseBtn, чтобы playBtn мог на него ссылаться
         pauseBtn = roundButton(R.drawable.ic_pause)
         pauseBtn.visibility = View.GONE
         pauseBtn.setOnClickListener {
@@ -66,7 +65,6 @@ class VideoPlayer(context: Context) : FrameLayout(context) {
             handler.removeCallbacks(updateProgress)
         }
 
-        // 2. Затем инициализируем playBtn
         playBtn = roundButton(R.drawable.ic_play)
         playBtn.setOnClickListener {
             videoView.start()
@@ -154,7 +152,6 @@ class VideoPlayer(context: Context) : FrameLayout(context) {
             controls.visibility = if (controls.visibility == View.VISIBLE) View.GONE else View.VISIBLE
         }
 
-        // 3. Инициализируем Runnable после создания всех зависимых view
         updateProgress = object : Runnable {
             override fun run() {
                 if (isPlaying) {
