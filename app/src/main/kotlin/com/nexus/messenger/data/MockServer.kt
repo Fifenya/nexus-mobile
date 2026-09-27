@@ -229,12 +229,9 @@ object MockServer {
             }
 
             method == "POST" && path == "/motes/gallery" -> {
-                val m = MoteM(
-                    "mote-${++counter}",
-                    body?.optString("name") ?: "Мот",
-                    body?.optString("url") ?: "mock://mote/$counter",
-                    MY_ID
-                )
+                val name = body?.optString("name") ?: "Мот"
+                val url = body?.optString("url") ?: "mock://mote/$counter"
+                val m = MoteM("mote-${++counter}", name, url, MY_ID)
                 motes.add(0, m)
                 201 to moteJson(m).toString()
             }
@@ -249,12 +246,15 @@ object MockServer {
                 val id = path.removePrefix("/chats/").removeSuffix("/members")
                 val arr = JSONArray()
                 (members[id] ?: mutableListOf()).forEach { m ->
+                    val uid = m["id"] ?: ""
+                    val uname = m["username"] ?: ""
+                    val urole = m["role"] ?: ""
                     val userObj = JSONObject()
-                    userObj.put("id", m["id"])
-                    userObj.put("username", m["username"])
+                    userObj.put("id", uid)
+                    userObj.put("username", uname)
                     val rowObj = JSONObject()
-                    rowObj.put("id", "m${m["id"]}")
-                    rowObj.put("role", m["role"])
+                    rowObj.put("id", "m$uid")
+                    rowObj.put("role", urole)
                     rowObj.put("user", userObj)
                     arr.put(rowObj)
                 }
