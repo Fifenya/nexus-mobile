@@ -5,7 +5,7 @@ import com.nexus.messenger.NexusApp
 import java.util.Locale
 
 object LocalPrefs {
-
+    // Инициализируется лениво при первом обращении, используя глобальный контекст
     private val prefs: android.content.SharedPreferences by lazy {
         NexusApp.context().getSharedPreferences("nexus_local", Context.MODE_PRIVATE)
     }
@@ -83,13 +83,14 @@ object LocalPrefs {
             if (v == null) remove("theme_id") else putString("theme_id", v)
         }.apply()
 
-    fun formatLocale(): Locale =
-        if (forceRu) Locale("ru") else Locale.getDefault()
+    fun formatLocale(): Locale = if (forceRu) Locale("ru") else Locale.getDefault()
 
-    fun isMuted(chatId: String): Boolean =
+    // Сигнатуры сохранены со старым Context, чтобы не ломать вызовы в Activity,
+    // но внутри используется безопасный NexusApp.context()
+    fun isMuted(@Suppress("UNUSED_PARAMETER") ctx: Context, chatId: String): Boolean =
         prefs.getStringSet("muted_chats", emptySet())?.contains(chatId) == true
 
-    fun setMuted(chatId: String, muted: Boolean) {
+    fun setMuted(@Suppress("UNUSED_PARAMETER") ctx: Context, chatId: String, muted: Boolean) {
         val s = prefs.getStringSet("muted_chats", emptySet())?.toMutableSet() ?: mutableSetOf()
         if (muted) s.add(chatId) else s.remove(chatId)
         prefs.edit().putStringSet("muted_chats", s).apply()
@@ -97,14 +98,14 @@ object LocalPrefs {
 
     fun presenceIntervalMs(): Long = if (powerSave) 60000L else 20000L
 
-    fun cacheSize(): Long {
+    fun cacheSize(@Suppress("UNUSED_PARAMETER") ctx: Context): Long {
         val c = NexusApp.context().getSharedPreferences("nexus_cache", Context.MODE_PRIVATE)
         var sum = 0L
         c.all.values.forEach { sum += ((it as? String)?.length ?: 0).toLong() }
         return sum * 2
     }
 
-    fun clearCache() {
+    fun clearCache(@Suppress("UNUSED_PARAMETER") ctx: Context) {
         NexusApp.context().getSharedPreferences("nexus_cache", Context.MODE_PRIVATE).edit().clear().apply()
     }
 
@@ -113,4 +114,8 @@ object LocalPrefs {
         bytes < 1024 * 1024 -> String.format(Locale.US, "%.1f КБ", bytes / 1024.0)
         else -> String.format(Locale.US, "%.2f МБ", bytes / (1024.0 * 1024.0))
     }
+
+    // Хелперы для Store.kt
+    fun getApiBase(): String = prefs.getString("api_base", "https://nexus.example.com") ?: "https://nexus.example.com"
+    fun setApiBase(value: String) = prefs.edit().putString("api_base", value).apply()
 }

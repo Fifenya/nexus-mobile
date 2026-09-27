@@ -1,5 +1,6 @@
 package com.nexus.messenger.data
 
+import android.content.Context
 import android.graphics.Color
 import com.nexus.messenger.NexusApp
 import com.nexus.messenger.R
@@ -8,13 +9,13 @@ import org.json.JSONObject
 object Theme {
     private var colors: JSONObject? = null
 
-    fun load() {
+    fun load(@Suppress("UNUSED_PARAMETER") ctx: Context) {
         colors = LocalPrefs.themeJson?.let {
             try { JSONObject(it) } catch (e: Exception) { null }
         }
     }
 
-    fun reset() {
+    fun reset(@Suppress("UNUSED_PARAMETER") ctx: Context) {
         LocalPrefs.themeJson = null
         colors = null
     }
@@ -42,9 +43,7 @@ object Theme {
 
     private fun withAlpha(c: Int, alpha: Int): Int = (alpha shl 24) or (c and 0x00FFFFFF)
 
-    fun surface2(): Int? =
-        opt("surface2") ?: opt("surface")?.let { lighten(it, 0.10f) }
-
+    fun surface2(): Int? = opt("surface2") ?: opt("surface")?.let { lighten(it, 0.10f) }
     fun accentAlpha(alpha: Int): Int? = opt("accent")?.let { withAlpha(it, alpha) }
 
     fun bgGradient(): IntArray? {
@@ -52,7 +51,7 @@ object Theme {
         return intArrayOf(lighten(bg, 0.10f), bg, darken(bg, 0.45f))
     }
 
-    fun color(res: Int): Int {
+    fun color(@Suppress("UNUSED_PARAMETER") ctx: Context, res: Int): Int {
         val c = when (res) {
             R.color.bgPrimary -> opt("background")
             R.color.bgSecondary -> opt("surface")
@@ -61,8 +60,7 @@ object Theme {
             R.color.accentText -> opt("accent")?.let { lighten(it, 0.30f) }
             R.color.textPrimary -> opt("text")
             R.color.textSecondary -> opt("textSecondary") ?: opt("text")?.let { darken(it, 0.35f) }
-            R.color.textMuted -> opt("textSecondary")?.let { darken(it, 0.25f) }
-                ?: opt("text")?.let { darken(it, 0.55f) }
+            R.color.textMuted -> opt("textSecondary")?.let { darken(it, 0.25f) } ?: opt("text")?.let { darken(it, 0.55f) }
             R.color.messageOther -> opt("surface")
             else -> null
         }
