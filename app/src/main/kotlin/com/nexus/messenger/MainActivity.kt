@@ -3,23 +3,22 @@ package com.nexus.messenger
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import com.nexus.messenger.data.Api
-import com.nexus.messenger.data.LocalPrefs
 import com.nexus.messenger.data.Store
 import com.nexus.messenger.data.Theme
 
 class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Store.init(this)
-        LocalPrefs.init(this)
+
+        // LocalPrefs инициализируется автоматически в NexusApp.onCreate()
+        // Theme.load теперь безопасно принимает Context
         Theme.load(this)
-        Api.resolveServer {
-            runOnUiThread {
-                val target = if (Store.token != null) ChatsActivity::class.java else LoginActivity::class.java
-                startActivity(Intent(this, target))
-                finish()
-            }
+
+        if (Store.token.isNullOrEmpty()) {
+            startActivity(Intent(this, LoginActivity::class.java))
+        } else {
+            startActivity(Intent(this, ChatsActivity::class.java))
         }
+        finish()
     }
 }

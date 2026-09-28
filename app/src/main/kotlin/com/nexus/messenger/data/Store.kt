@@ -12,4 +12,6 @@ object Store {
     fun logout() {
         token = null
         user = null
-        test
+        testMode = false
+    }
+}
